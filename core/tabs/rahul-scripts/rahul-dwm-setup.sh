@@ -96,6 +96,11 @@ copyConfigFolders() {
     [ ! -d ~/.config ] && mkdir -p ~/.config
     [ ! -d ~/.local/bin ] && mkdir -p ~/.local/bin
 
+    # Ensure user owns their config directory (fixes potential root ownership from previous runs)
+    if [ -d "$HOME/.config" ]; then
+        "$ESCALATION_TOOL" chown -R "$USER:$USER" "$HOME/.config"
+    fi
+
     # Copy scripts to local bin
     if [ -d "$DWM_DIR/scripts" ]; then
         cp -rf "$DWM_DIR/scripts/." "$HOME/.local/bin/"
@@ -106,7 +111,15 @@ copyConfigFolders() {
     if [ -d "$DWM_DIR/config" ]; then
         for dir in "$DWM_DIR/config/"*/; do
             dir_name=$(basename "$dir")
-            cp -r "$dir" ~/.config/
+            target_dir="$HOME/.config/$dir_name"
+            
+            # Create target directory if it doesn't exist
+            if [ ! -d "$target_dir" ]; then
+                mkdir -p "$target_dir"
+            fi
+
+            # Copy contents (using /. to avoid nesting if dir exists)
+            cp -rf "$dir". "$target_dir/"
             printf "%b\n" "${GREEN}Copied $dir_name to ~/.config/${RC}"
         done
     fi
