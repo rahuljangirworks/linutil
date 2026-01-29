@@ -1,6 +1,15 @@
 name = "Rahul's Scripts"
 
 [[data]]
+name = "Remote"
+
+[[data.entries]]
+name = "Tailscale VPN Setup"
+description = "Install and configure Tailscale VPN with custom hostname"
+script = "remote/tailscale-setup.sh"
+task_list = "I SS"
+
+[[data]]
 name = "Rahul's MyBash Setup"
 description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
 script = "rahul-mybash-setup.sh"
