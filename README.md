@@ -1,16 +1,34 @@
-# Chris Titus Tech's Linux Utility
+# Rahul's Linux Utility (LinUtil Fork)
 
-[![Version](https://img.shields.io/github/v/release/ChrisTitusTech/linutil?color=%230567ff&label=Latest%20Release&style=for-the-badge)](https://github.com/ChrisTitusTech/linutil/releases/latest)
-![GitHub Downloads (specific asset, all releases)](https://img.shields.io/github/downloads/ChrisTitusTech/linutil/linutil?label=Total%20Downloads&style=for-the-badge)
-[![Crates.io Version](https://img.shields.io/crates/v/linutil_tui?style=for-the-badge&color=%23af3a03)](https://crates.io/crates/linutil_tui)
-[![](https://dcbadge.limes.pink/api/server/https://discord.gg/RUbZUZyByQ?theme=default-inverted&style=for-the-badge)](https://discord.gg/RUbZUZyByQ)
-![Preview](/.github/preview.gif)
-<p align="center"><i>The above preview was generated with the help of <a href="https://github.com/charmbracelet/vhs">vhs</a>, give them a :star:!</i></p>
+[![Upstream](https://img.shields.io/badge/Upstream-ChrisTitusTech%2Flinutil-blue?style=for-the-badge)](https://github.com/ChrisTitusTech/linutil)
+[![Fork](https://img.shields.io/badge/Fork-rahuljangirworks%2Flinutil-green?style=for-the-badge)](https://github.com/rahuljangirworks/linutil)
+
+> 🍴 **This is a personal fork of [Chris Titus Tech's LinUtil](https://github.com/ChrisTitusTech/linutil)** with custom scripts and configurations.
+
+## 🎨 What's Different in This Fork?
+
+This fork includes a custom **"Rahul's Scripts"** tab with personalized setup scripts that pull configurations from my own repositories:
+
+| Script | Description | Source Repo |
+|--------|-------------|-------------|
+| **Rahul's MyBash Setup** | Bash + Starship + fzf + zoxide | [rahuljangirworks/mybash](https://github.com/rahuljangirworks/mybash) |
+| **Rahul's Alacritty Setup** | Alacritty with Nordic theme | [rahuljangirworks/dwm-rahul](https://github.com/rahuljangirworks/dwm-rahul) |
+| **Rahul's Fastfetch Setup** | Fastfetch with Rajasthani pastel theme | [rahuljangirworks/mybash](https://github.com/rahuljangirworks/mybash) |
+| **Rahul's Ghostty Setup** | Ghostty terminal config | [rahuljangirworks/dwm-rahul](https://github.com/rahuljangirworks/dwm-rahul) |
+| **Rahul's Kitty Setup** | Kitty with Nord theme | [rahuljangirworks/dwm-rahul](https://github.com/rahuljangirworks/dwm-rahul) |
+| **Rahul's Rofi Setup** | Rofi with Nord theme + powermenu | [rahuljangirworks/dwm-rahul](https://github.com/rahuljangirworks/dwm-rahul) |
+| **Rahul's DWM Setup** | Complete DWM environment (xinitrc, no SDDM) | [rahuljangirworks/dwm-rahul](https://github.com/rahuljangirworks/dwm-rahul) |
+
+**Backgrounds:** [rahuljangirworks/background](https://github.com/rahuljangirworks/background)
+
+---
+
+## 📦 Original LinUtil
 
 **Linutil** is a distro-agnostic toolbox designed to simplify everyday Linux tasks. It helps you set up applications and optimize your system for specific use cases. The utility is actively developed in Rust 🦀, providing performance and reliability.
 
 > [!NOTE]
-> Since the project is still in active development, you may encounter some issues. Please consider [submitting feedback](https://github.com/ChrisTitusTech/linutil/issues) if you do.
+> For upstream issues, please submit feedback to [ChrisTitusTech/linutil](https://github.com/ChrisTitusTech/linutil/issues).
 
 ## 💡 Usage
 To get started, pick which branch you would like to use, then run the command in your terminal:
