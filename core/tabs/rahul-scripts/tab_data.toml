@@ -1,0 +1,6 @@
+name = "Rahul's Scripts"
+
+[[data]]
+name = "Hello World"
+description = "A simple test script to verify the custom tab works"
+script = "hello.sh"

@@ -2,3 +2,5 @@
 tui/src/logo.rs merge=ours
 tui/Cargo.toml merge=ours
 tui/assets/rahul_logo.png merge=ours
+core/tabs/tabs.toml merge=ours
+core/tabs/rahul-scripts/** merge=ours
