@@ -6,6 +6,36 @@ description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
 script = "rahul-mybash-setup.sh"
 
 [[data]]
+name = "Rahul's Alacritty Setup"
+description = "Install Alacritty with Rahul's Nordic theme config from dwm-rahul"
+script = "rahul-alacritty-setup.sh"
+
+[[data]]
+name = "Rahul's Fastfetch Setup"
+description = "Install Fastfetch with Rahul's Rajasthani pastel theme from mybash"
+script = "rahul-fastfetch-setup.sh"
+
+[[data]]
+name = "Rahul's Ghostty Setup"
+description = "Install Ghostty with Rahul's config from dwm-rahul"
+script = "rahul-ghostty-setup.sh"
+
+[[data]]
+name = "Rahul's Kitty Setup"
+description = "Install Kitty with Rahul's Nord theme config from dwm-rahul"
+script = "rahul-kitty-setup.sh"
+
+[[data]]
+name = "Rahul's Rofi Setup"
+description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
+script = "rahul-rofi-setup.sh"
+
+[[data]]
+name = "Rahul's DWM Setup"
+description = "Complete DWM environment setup with xinitrc (no SDDM) from dwm-rahul"
+script = "rahul-dwm-setup.sh"
+
+[[data]]
 name = "Hello World"
 description = "A simple test script to verify the custom tab works"
 script = "hello.sh"
