@@ -15,6 +15,12 @@ description = "Install OpenSSH server with security hardening (rerunnable)"
 script = "remote/ssh-setup.sh"
 task_list = "I SS"
 
+[[data.entries]]
+name = "RustDesk Remote Desktop"
+description = "Install RustDesk with optional self-hosted relay server (rerunnable)"
+script = "remote/rustdesk-setup.sh"
+task_list = "I SS"
+
 [[data]]
 name = "Rahul's MyBash Setup"
 description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
