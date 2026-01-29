@@ -127,6 +127,11 @@ copyConfigFolders() {
 
 setupXinitrc() {
     printf "%b\n" "${YELLOW}Setting up .xinitrc...${RC}"
+
+    # Ensure user owns existing .xinitrc (fixes root ownership from sudo make install)
+    if [ -f "$HOME/.xinitrc" ]; then
+        "$ESCALATION_TOOL" chown "$USER:$USER" "$HOME/.xinitrc"
+    fi
     
     # Backup existing .xinitrc
     if [ -f "$HOME/.xinitrc" ] && [ ! -f "$HOME/.xinitrc.bak" ]; then
