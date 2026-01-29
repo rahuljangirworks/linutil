@@ -125,7 +125,7 @@ impl Logo {
         if text_y < area.y + area.height {
             let text_area = Rect::new(area.x, text_y, area.width, 1);
             let label = Line::styled(
-                format!("Linutil V{}", env!("CARGO_PKG_VERSION")),
+                "Linutil V1.0".to_string(),
                 Style::default().fg(theme.tab_color()).bold(),
             );
             let text = Paragraph::new(label).alignment(Alignment::Center);

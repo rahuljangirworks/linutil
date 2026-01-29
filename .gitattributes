@@ -1,5 +1,6 @@
 # Keep our customized files during upstream merges
 tui/src/logo.rs merge=ours
+tui/src/state.rs merge=ours
 tui/Cargo.toml merge=ours
 tui/assets/rahul_logo.png merge=ours
 core/tabs/tabs.toml merge=ours

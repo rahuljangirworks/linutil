@@ -359,7 +359,7 @@ impl AppState {
             logo.draw(frame, left_chunks[0], &self.theme);
         } else {
             let label = Paragraph::new(Line::styled(
-                format!("Linutil V{}", env!("CARGO_PKG_VERSION")),
+                "Linutil V1.0".to_string(),
                 Style::default().fg(self.theme.tab_color()).bold(),
             ))
             .alignment(Alignment::Center);
