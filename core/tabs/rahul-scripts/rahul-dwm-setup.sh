@@ -41,7 +41,7 @@ installDWMDeps() {
                 build-essential libx11-dev libxinerama-dev libxft-dev libimlib2-dev libx11-xcb-dev libxcb-res0-dev git unzip \
                 flameshot feh mate-polkit alsa-utils rofi \
                 xclip xarchiver thunar tumbler gvfs thunar-archive-plugin \
-                dunst dex xscreensaver x11-utils polybar picom \
+                dunst dex xscreensaver x11-utils polybar picom psmisc \
                 xdg-user-dirs xdg-desktop-portal-gtk pipewire pavucontrol \
                 gnome-keyring flatpak network-manager network-manager-gnome
             ;;
