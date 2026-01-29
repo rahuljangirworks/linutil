@@ -40,8 +40,8 @@ installDWMDeps() {
             "$ESCALATION_TOOL" "$PACKAGER" install -y \
                 build-essential libx11-dev libxinerama-dev libxft-dev libimlib2-dev git unzip \
                 flameshot feh mate-polkit alsa-utils rofi \
-                xclip xarchiver thunar tumbler tldr gvfs thunar-archive-plugin \
-                dunst dex xscreensaver xprop polybar picom \
+                xclip xarchiver thunar tumbler gvfs thunar-archive-plugin \
+                dunst dex xscreensaver x11-utils polybar picom \
                 xdg-user-dirs xdg-desktop-portal-gtk pipewire pavucontrol \
                 gnome-keyring flatpak network-manager network-manager-gnome
             ;;
