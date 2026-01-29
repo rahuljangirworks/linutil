@@ -9,6 +9,12 @@ description = "Install and configure Tailscale VPN with custom hostname"
 script = "remote/tailscale-setup.sh"
 task_list = "I SS"
 
+[[data.entries]]
+name = "SSH Secure Setup"
+description = "Install OpenSSH server with security hardening (rerunnable)"
+script = "remote/ssh-setup.sh"
+task_list = "I SS"
+
 [[data]]
 name = "Rahul's MyBash Setup"
 description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
