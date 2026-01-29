@@ -13,6 +13,9 @@ setupXorg() {
         pacman)
             "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm xorg-xinit xorg-server
             ;;
+        apt-get|nala)
+            "$ESCALATION_TOOL" "$PACKAGER" install -y xinit xserver-xorg
+            ;;
         *)
             printf "%b\n" "${RED}Unsupported package manager: $PACKAGER${RC}"
             exit 1
@@ -32,6 +35,15 @@ installDWMDeps() {
                 dunst dex xscreensaver xorg-xprop polybar picom \
                 xdg-user-dirs xdg-desktop-portal-gtk pipewire pavucontrol \
                 gnome-keyring flatpak networkmanager network-manager-applet
+            ;;
+        apt-get|nala)
+            "$ESCALATION_TOOL" "$PACKAGER" install -y \
+                build-essential libx11-dev libxinerama-dev libxft-dev libimlib2-dev git unzip \
+                flameshot feh mate-polkit alsa-utils rofi \
+                xclip xarchiver thunar tumbler tldr gvfs thunar-archive-plugin \
+                dunst dex xscreensaver xprop polybar picom \
+                xdg-user-dirs xdg-desktop-portal-gtk pipewire pavucontrol \
+                gnome-keyring flatpak network-manager network-manager-gnome
             ;;
         *)
             printf "%b\n" "${RED}Unsupported package manager: $PACKAGER${RC}"
