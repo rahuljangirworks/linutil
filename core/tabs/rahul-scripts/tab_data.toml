@@ -1,6 +1,11 @@
 name = "Rahul's Scripts"
 
 [[data]]
+name = "Rahul's MyBash Setup"
+description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
+script = "rahul-mybash-setup.sh"
+
+[[data]]
 name = "Hello World"
 description = "A simple test script to verify the custom tab works"
 script = "hello.sh"
