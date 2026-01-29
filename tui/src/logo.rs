@@ -32,7 +32,7 @@ pub struct Logo {
 
 impl Logo {
     pub fn load() -> Option<Self> {
-        let dyn_image = image::load_from_memory(include_bytes!("../assets/ctt_logo.png")).ok()?;
+        let dyn_image = image::load_from_memory(include_bytes!("../assets/rahul_logo.png")).ok()?;
         let rgba = dyn_image.to_rgba8();
         let image_size = rgba.dimensions();
 

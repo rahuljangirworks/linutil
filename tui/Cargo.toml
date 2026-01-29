@@ -11,7 +11,7 @@ include = [
     "src/*.rs",
     "Cargo.toml",
     "cool_tips.txt",
-    "assets/ctt_logo.png",
+    "assets/rahul_logo.png",
     "../man/linutil.1",
 ]
 
