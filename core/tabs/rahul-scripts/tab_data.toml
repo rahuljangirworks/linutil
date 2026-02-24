@@ -16,6 +16,12 @@ script = "remote/ssh-setup.sh"
 task_list = "I SS"
 
 [[data.entries]]
+name = "SSH Comprehensive Hardening"
+description = "Comprehensive SSH hardening: strong crypto, Ed25519 keys, drop-in config, banner, post-quantum KEX (rerunnable)"
+script = "remote/secure-ssh.sh"
+task_list = "I SS"
+
+[[data.entries]]
 name = "RustDesk Remote Desktop"
 description = "Install RustDesk with optional self-hosted relay server (rerunnable)"
 script = "remote/rustdesk-setup.sh"
