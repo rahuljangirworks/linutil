@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Description: Comprehensive SSH hardening with strong crypto, Ed25519 keys, drop-in config, and post-quantum KEX
+# Description: Install and harden SSH server with strong crypto, drop-in config, and container compatibility.
 # Rerunnable: Yes - backs up config, validates before applying, auto-rollback on error
 # Author: Rahul Jangir
 # Based on: https://github.com/rahuljangirworks/secure-SSH
@@ -207,7 +207,6 @@ writeHardeningConfig() {
 
 # ─── Port & Protocol ───────────────────────────────────────────────────────
 Port ${SSH_PORT}
-Protocol 2
 AddressFamily inet
 
 # ─── Authentication ────────────────────────────────────────────────────────
@@ -254,7 +253,6 @@ PrintMotd no
 PrintLastLog yes
 
 # ─── Challenge-Response ────────────────────────────────────────────────────
-ChallengeResponseAuthentication no
 KbdInteractiveAuthentication no
 SSHEOF
 
@@ -312,9 +310,9 @@ validateConfig() {
     fi
 }
 
-# ─── Restart SSH service ──────────────────────────────────────────────────
-restartSSH() {
-    printf "%b\n" "${YELLOW}Restarting SSH daemon...${RC}"
+# ─── Enable and Restart SSH service ───────────────────────────────────────
+enableAndRestartSSH() {
+    printf "%b\n" "${YELLOW}Enabling and starting SSH daemon...${RC}"
 
     # Disable systemd socket activation if present (Debian 12+)
     # ssh.socket overrides the Port directive from sshd_config
@@ -327,12 +325,15 @@ restartSSH() {
         fi
     fi
 
-    if "$ESCALATION_TOOL" systemctl restart sshd 2>/dev/null; then
-        printf "%b\n" "${GREEN}✓ sshd restarted${RC}"
-    elif "$ESCALATION_TOOL" systemctl restart ssh 2>/dev/null; then
-        printf "%b\n" "${GREEN}✓ ssh restarted${RC}"
+    # Try sshd first (Arch, Fedora, RHEL), then ssh (Debian/Ubuntu)
+    if "$ESCALATION_TOOL" systemctl enable --now sshd 2>/dev/null; then
+        "$ESCALATION_TOOL" systemctl restart sshd 2>/dev/null
+        printf "%b\n" "${GREEN}✓ sshd enabled and restarted${RC}"
+    elif "$ESCALATION_TOOL" systemctl enable --now ssh 2>/dev/null; then
+        "$ESCALATION_TOOL" systemctl restart ssh 2>/dev/null
+        printf "%b\n" "${GREEN}✓ ssh enabled and restarted${RC}"
     else
-        printf "%b\n" "${RED}✗ Failed to restart SSH daemon${RC}"
+        printf "%b\n" "${RED}✗ Failed to enable/restart SSH daemon${RC}"
         printf "%b\n" "${YELLOW}Try manually: systemctl restart sshd${RC}"
         return 1
     fi
@@ -340,8 +341,10 @@ restartSSH() {
 
 # ─── Print summary ────────────────────────────────────────────────────────
 printSummary() {
+    IP_ADDR=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "your-ip")
+
     printf "%b\n" "${GREEN}========================================${RC}"
-    printf "%b\n" "${GREEN}SSH Hardening Complete! 🔒${RC}"
+    printf "%b\n" "${GREEN}SSH Setup & Hardening Complete! 🔒${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 
     printf "%b\n" "${CYAN}Settings applied:${RC}"
@@ -370,7 +373,7 @@ printSummary() {
     printf "\n"
     printf "%b\n" "${YELLOW}⚠  CRITICAL: Test SSH access in a NEW terminal before${RC}"
     printf "%b\n" "${YELLOW}   closing this session!${RC}"
-    printf "%b\n" "${YELLOW}   ssh -p ${SSH_PORT} <user>@<host>${RC}"
+    printf "%b\n" "${YELLOW}   ssh -p ${SSH_PORT} <user>@${IP_ADDR}${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 }
 
@@ -388,5 +391,5 @@ createBanner
 writeHardeningConfig
 securePermissions
 validateConfig
-restartSSH
+enableAndRestartSSH
 printSummary

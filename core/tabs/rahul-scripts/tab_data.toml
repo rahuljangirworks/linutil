@@ -10,14 +10,8 @@ script = "remote/tailscale-setup.sh"
 task_list = "I SS"
 
 [[data.entries]]
-name = "SSH Secure Setup"
-description = "Install OpenSSH server with security hardening (rerunnable)"
-script = "remote/ssh-setup.sh"
-task_list = "I SS"
-
-[[data.entries]]
-name = "SSH Comprehensive Hardening"
-description = "Comprehensive SSH hardening: strong crypto, Ed25519 keys, drop-in config, banner, post-quantum KEX (rerunnable)"
+name = "SSH Setup & Hardening"
+description = "Install and secure SSH: custom port, strong crypto, Keys, drop-in config, post-quantum KEX (rerunnable)"
 script = "remote/secure-ssh.sh"
 task_list = "I SS"
 
