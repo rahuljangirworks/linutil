@@ -25,13 +25,34 @@ RECOMMENDED_CIPHERS="chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128
 RECOMMENDED_MACS="hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com"
 RECOMMENDED_HOST_KEY_ALGOS="ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256-cert-v01@openssh.com,rsa-sha2-256"
 
+# ─── Prompt for SSH port ───────────────────────────────────────────────────
+askSSHPort() {
+    CURRENT_PORT=$(grep -E "^#?Port " "$SSHD_CONFIG" 2>/dev/null | head -1 | awk '{print $2}' || echo "22")
+    CURRENT_PORT="${CURRENT_PORT:-22}"
+
+    printf "%b\n" "${CYAN}========================================${RC}"
+    printf "%b\n" "${CYAN}SSH Port Configuration${RC}"
+    printf "%b\n" "${CYAN}========================================${RC}"
+    printf "%b" "${CYAN}Enter SSH port [${CURRENT_PORT}]: ${RC}"
+    read -r INPUT_PORT
+    SSH_PORT="${INPUT_PORT:-$CURRENT_PORT}"
+
+    if [ "$SSH_PORT" != "$CURRENT_PORT" ]; then
+        printf "%b\n" "${YELLOW}⚠ SSH port will change from ${CURRENT_PORT} to ${SSH_PORT}${RC}"
+        printf "%b\n" "${YELLOW}  Make sure to update your firewall and connection settings!${RC}"
+    else
+        printf "%b\n" "${GREEN}✓ Using SSH port: ${SSH_PORT}${RC}"
+    fi
+}
+
 # ─── Detect OpenSSH Version ────────────────────────────────────────────────
 detectOpenSSHVersion() {
     OPENSSH_MAJOR=0
     OPENSSH_MINOR=0
 
     if command -v sshd > /dev/null 2>&1; then
-        OPENSSH_VERSION=$(sshd -V 2>&1 | grep -oP 'OpenSSH_\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+        OPENSSH_VERSION=$(sshd -V 2>&1 | sed -n 's/.*OpenSSH_\([0-9]*\.[0-9]*\).*/\1/p' | head -1)
+        OPENSSH_VERSION="${OPENSSH_VERSION:-unknown}"
         if [ "$OPENSSH_VERSION" != "unknown" ]; then
             OPENSSH_MAJOR=$(echo "$OPENSSH_VERSION" | cut -d. -f1)
             OPENSSH_MINOR=$(echo "$OPENSSH_VERSION" | cut -d. -f2)
@@ -118,7 +139,12 @@ ensureDropInDir() {
 
     # Ensure Include directive exists in main config
     if ! grep -q "^Include /etc/ssh/sshd_config.d/" "$SSHD_CONFIG" 2>/dev/null; then
-        "$ESCALATION_TOOL" sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' "$SSHD_CONFIG"
+        # Avoid eval word-splitting by checking if root
+        if [ "$(id -u)" = "0" ]; then
+            sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' "$SSHD_CONFIG"
+        else
+            "$ESCALATION_TOOL" sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' "$SSHD_CONFIG"
+        fi
         printf "%b\n" "${CYAN}→ Added Include directive to sshd_config${RC}"
     else
         printf "%b\n" "${GREEN}✓ Include directive already present${RC}"
@@ -247,12 +273,25 @@ securePermissions() {
 validateConfig() {
     printf "%b\n" "${YELLOW}Validating SSH configuration...${RC}"
 
-    if "$ESCALATION_TOOL" sshd -t 2>/dev/null; then
+    # Run sshd -t and capture errors for debugging
+    if [ "$(id -u)" = "0" ]; then
+        SSHD_ERRORS=$(sshd -t 2>&1) && SSHD_VALID=0 || SSHD_VALID=1
+    else
+        SSHD_ERRORS=$("$ESCALATION_TOOL" sshd -t 2>&1) && SSHD_VALID=0 || SSHD_VALID=1
+    fi
+
+    if [ "$SSHD_VALID" = "0" ]; then
         printf "%b\n" "${GREEN}✓ Configuration is valid${RC}"
         return 0
     else
-        printf "%b\n" "${RED}✗ Configuration has syntax errors! Reverting...${RC}"
-        "$ESCALATION_TOOL" rm -f "$SSHD_HARDENING_CONF"
+        printf "%b\n" "${RED}✗ Configuration has syntax errors!${RC}"
+        printf "%b\n" "${RED}  Error: ${SSHD_ERRORS}${RC}"
+        printf "%b\n" "${YELLOW}Reverting hardening config...${RC}"
+        if [ "$(id -u)" = "0" ]; then
+            rm -f "$SSHD_HARDENING_CONF"
+        else
+            "$ESCALATION_TOOL" rm -f "$SSHD_HARDENING_CONF"
+        fi
         # Restore from latest backup if available
         if [ -f "${BACKUP_DIR}/.latest" ]; then
             LATEST_TS=$(cat "${BACKUP_DIR}/.latest")
@@ -323,6 +362,7 @@ checkEscalationTool
 installSSH
 detectOpenSSHVersion
 selectKEX
+askSSHPort
 createBackup
 ensureDropInDir
 ensureHostKeys
