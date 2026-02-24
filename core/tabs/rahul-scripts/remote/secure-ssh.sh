@@ -316,6 +316,17 @@ validateConfig() {
 restartSSH() {
     printf "%b\n" "${YELLOW}Restarting SSH daemon...${RC}"
 
+    # Disable systemd socket activation if present (Debian 12+)
+    # ssh.socket overrides the Port directive from sshd_config
+    if systemctl is-active --quiet ssh.socket 2>/dev/null; then
+        printf "%b\n" "${YELLOW}→ Disabling ssh.socket (overrides port config)${RC}"
+        if [ "$(id -u)" = "0" ]; then
+            systemctl disable --now ssh.socket 2>/dev/null || true
+        else
+            "$ESCALATION_TOOL" systemctl disable --now ssh.socket 2>/dev/null || true
+        fi
+    fi
+
     if "$ESCALATION_TOOL" systemctl restart sshd 2>/dev/null; then
         printf "%b\n" "${GREEN}✓ sshd restarted${RC}"
     elif "$ESCALATION_TOOL" systemctl restart ssh 2>/dev/null; then
