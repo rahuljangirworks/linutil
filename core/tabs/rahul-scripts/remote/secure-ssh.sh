@@ -273,6 +273,13 @@ securePermissions() {
 validateConfig() {
     printf "%b\n" "${YELLOW}Validating SSH configuration...${RC}"
 
+    # Ensure privilege separation directory exists (required in containers)
+    if [ "$(id -u)" = "0" ]; then
+        mkdir -p /run/sshd
+    else
+        "$ESCALATION_TOOL" mkdir -p /run/sshd
+    fi
+
     # Run sshd -t and capture errors for debugging
     if [ "$(id -u)" = "0" ]; then
         SSHD_ERRORS=$(sshd -t 2>&1) && SSHD_VALID=0 || SSHD_VALID=1
