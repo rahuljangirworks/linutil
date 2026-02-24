@@ -28,10 +28,16 @@ setConfig() {
     # Check if option exists (commented or uncommented)
     if grep -qE "^#?${option}" "$SSHD_CONFIG"; then
         # Replace existing line
-        "$ESCALATION_TOOL" sed -i "s/^#*${option}.*/${option} ${value}/" "$SSHD_CONFIG"
+        # Note: avoid using "$ESCALATION_TOOL" with sed when ESCALATION_TOOL=eval
+        # because eval re-parses and word-splits the sed expression
+        if [ "$(id -u)" = "0" ]; then
+            sed -i "s/^#*${option}.*/${option} ${value}/" "$SSHD_CONFIG"
+        else
+            "$ESCALATION_TOOL" sed -i "s/^#*${option}.*/${option} ${value}/" "$SSHD_CONFIG"
+        fi
     else
         # Append new option
-        echo "${option} ${value}" | "$ESCALATION_TOOL" tee -a "$SSHD_CONFIG" >/dev/null
+        printf '%s %s\n' "$option" "$value" | "$ESCALATION_TOOL" tee -a "$SSHD_CONFIG" > /dev/null
     fi
     printf "%b\n" "${YELLOW}→ Set $option to $value${RC}"
 }
