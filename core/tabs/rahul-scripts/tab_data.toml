@@ -60,3 +60,8 @@ script = "rahul-dwm-setup.sh"
 name = "Hello World"
 description = "A simple test script to verify the custom tab works"
 script = "hello.sh"
+
+[[data]]
+name = "Antigravity Fresh Refresh"
+description = "Fresh reset of Antigravity (clears cache/auth/tokens) while preserving all conversations, brain & memory"
+script = "rahul-antigravity-logout.sh"
