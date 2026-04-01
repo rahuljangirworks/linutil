@@ -65,3 +65,8 @@ script = "hello.sh"
 name = "Antigravity Fresh Refresh"
 description = "Fresh reset of Antigravity (clears cache/auth/tokens) while preserving all conversations, brain & memory"
 script = "rahul-antigravity-logout.sh"
+
+[[data]]
+name = "Rahul's Architecture Setup"
+description = "Creates ~/projacts/ structure and clones .agent and rahul-second-brain"
+script = "rahul-architecture-setup.sh"
