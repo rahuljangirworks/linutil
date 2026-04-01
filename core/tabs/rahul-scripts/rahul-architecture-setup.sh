@@ -7,6 +7,20 @@ echo "   Setting up Rahul's Architecture...      "
 echo "==========================================="
 echo ""
 
+# 0. Ensure GitHub SSH is configured before we attempt to clone!
+SSH_SETUP_SCRIPT="$(dirname "$0")/rahul-github-ssh-setup.sh"
+if [ -x "$SSH_SETUP_SCRIPT" ]; then
+    echo "Running GitHub SSH Setup Verification Phase..."
+    "$SSH_SETUP_SCRIPT"
+else
+    echo "⚠️ Cannot find or execute rahul-github-ssh-setup.sh, skipping SSH verification..."
+fi
+
+echo "==========================================="
+echo "   Resuming Architecture Setup...          "
+echo "==========================================="
+echo ""
+
 PROJACTS_DIR="$HOME/projacts"
 
 # 1. Create the main projacts directory
