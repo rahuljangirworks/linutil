@@ -70,3 +70,8 @@ script = "rahul-antigravity-logout.sh"
 name = "Rahul's Architecture Setup"
 description = "Creates ~/projacts/ structure and clones .agent and rahul-second-brain"
 script = "rahul-architecture-setup.sh"
+
+[[data]]
+name = "GitHub SSH Key Gen & Connect"
+description = "Auto-generates GitHub SSH keys, installs clipboard deps, and verifies connection"
+script = "rahul-github-ssh-setup.sh"
