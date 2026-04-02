@@ -4,9 +4,9 @@ name = "Rahul's Scripts"
 name = "Remote"
 
 [[data.entries]]
-name = "Tailscale VPN Setup"
-description = "Install and configure Tailscale VPN with custom hostname"
-script = "remote/tailscale-setup.sh"
+name = "RustDesk Remote Desktop"
+description = "Install RustDesk with optional self-hosted relay server (rerunnable)"
+script = "remote/rustdesk-setup.sh"
 task_list = "I SS"
 
 [[data.entries]]
@@ -16,20 +16,40 @@ script = "remote/secure-ssh.sh"
 task_list = "I SS"
 
 [[data.entries]]
-name = "RustDesk Remote Desktop"
-description = "Install RustDesk with optional self-hosted relay server (rerunnable)"
-script = "remote/rustdesk-setup.sh"
+name = "Tailscale VPN Setup"
+description = "Install and configure Tailscale VPN with custom hostname"
+script = "remote/tailscale-setup.sh"
 task_list = "I SS"
 
 [[data]]
-name = "Rahul's MyBash Setup"
-description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
-script = "rahul-mybash-setup.sh"
+name = "Antigravity Fresh Refresh"
+description = "Fresh reset of Antigravity (clears cache/auth/tokens) while preserving all conversations, brain & memory"
+script = "rahul-antigravity-logout.sh"
+
+[[data]]
+name = "GitHub SSH Key Gen & Connect"
+description = "Auto-generates GitHub SSH keys, installs clipboard deps, and verifies connection"
+script = "rahul-github-ssh-setup.sh"
+
+[[data]]
+name = "Hello World"
+description = "A simple test script to verify the custom tab works"
+script = "hello.sh"
 
 [[data]]
 name = "Rahul's Alacritty Setup"
 description = "Install Alacritty with Rahul's Nordic theme config from dwm-rahul"
 script = "rahul-alacritty-setup.sh"
+
+[[data]]
+name = "Rahul's Architecture Setup"
+description = "Creates ~/projacts/ structure and clones .agent and rahul-second-brain"
+script = "rahul-architecture-setup.sh"
+
+[[data]]
+name = "Rahul's DWM Setup"
+description = "Complete DWM environment setup with xinitrc (no SDDM) from dwm-rahul"
+script = "rahul-dwm-setup.sh"
 
 [[data]]
 name = "Rahul's Fastfetch Setup"
@@ -47,31 +67,16 @@ description = "Install Kitty with Rahul's Nord theme config from dwm-rahul"
 script = "rahul-kitty-setup.sh"
 
 [[data]]
+name = "Rahul's MyBash Setup"
+description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
+script = "rahul-mybash-setup.sh"
+
+[[data]]
+name = "Rahul's Qwen Setup (deepseek-v3.2)"
+description = "Install Qwen from CLI, AgentRouter API, and set default deepseek-v3.2"
+script = "rahul-qwen-setup.sh"
+[[data]]
 name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
 script = "rahul-rofi-setup.sh"
 
-[[data]]
-name = "Rahul's DWM Setup"
-description = "Complete DWM environment setup with xinitrc (no SDDM) from dwm-rahul"
-script = "rahul-dwm-setup.sh"
-
-[[data]]
-name = "Hello World"
-description = "A simple test script to verify the custom tab works"
-script = "hello.sh"
-
-[[data]]
-name = "Antigravity Fresh Refresh"
-description = "Fresh reset of Antigravity (clears cache/auth/tokens) while preserving all conversations, brain & memory"
-script = "rahul-antigravity-logout.sh"
-
-[[data]]
-name = "Rahul's Architecture Setup"
-description = "Creates ~/projacts/ structure and clones .agent and rahul-second-brain"
-script = "rahul-architecture-setup.sh"
-
-[[data]]
-name = "GitHub SSH Key Gen & Connect"
-description = "Auto-generates GitHub SSH keys, installs clipboard deps, and verifies connection"
-script = "rahul-github-ssh-setup.sh"
