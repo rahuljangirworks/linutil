@@ -75,6 +75,12 @@ script = "rahul-mybash-setup.sh"
 name = "Rahul's Qwen Setup (deepseek-v3.2)"
 description = "Install Qwen from CLI, AgentRouter API, and set default deepseek-v3.2"
 script = "rahul-qwen-setup.sh"
+
+[[data]]
+name = "Rahul's AI Agent Stack"
+description = "Install ALL AI terminal agents: Qwen, Gemini CLI, Kilo Code, Aider, Cline (any Linux distro)"
+script = "rahul-ai-agents-setup.sh"
+
 [[data]]
 name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
