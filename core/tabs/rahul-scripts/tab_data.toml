@@ -82,6 +82,11 @@ description = "Install ALL AI terminal agents: Qwen, Gemini CLI, Kilo Code, Aide
 script = "rahul-ai-agents-setup.sh"
 
 [[data]]
+name = "Rahul's GLM Claude Code Setup"
+description = "Install Claude Code CLI with Z.AI GLM models (glm-5.1, glm-4.5-air) — API key, settings, shell env"
+script = "rahul-glm-claude-setup.sh"
+
+[[data]]
 name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
 script = "rahul-rofi-setup.sh"
