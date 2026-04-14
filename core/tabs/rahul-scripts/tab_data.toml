@@ -91,3 +91,9 @@ name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
 script = "rahul-rofi-setup.sh"
 
+[[data]]
+name = "Rahul's Gemma 4 + Ollama Setup"
+description = "Install Ollama + Gemma 4 AI model (auto-detects GPU/RAM, works on any Linux distro)"
+script = "rahul-gemma4-ollama-setup.sh"
+task_list = "I SS"
+
