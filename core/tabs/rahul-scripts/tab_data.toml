@@ -82,6 +82,18 @@ description = "Install ALL AI terminal agents: Qwen, Gemini CLI, Kilo Code, Aide
 script = "rahul-ai-agents-setup.sh"
 
 [[data]]
+name = "Rahul's OpenCode Setup"
+description = "Install OpenCode CLI + Desktop AppImage with fast RahulOS launcher and rofi icon"
+script = "rahul-opencode-setup.sh"
+task_list = "I FM"
+
+[[data]]
+name = "Rahul's OpenCode Servers 1-5"
+description = "Install five local OpenCode servers with shared RahulOS filesystem MCP and isolated auth"
+script = "rahul-opencode-servers-setup.sh"
+task_list = "I SS"
+
+[[data]]
 name = "Rahul's GLM Claude Code Setup"
 description = "Install Claude Code CLI with Z.AI GLM models (glm-5.1, glm-4.5-air) — API key, settings, shell env"
 script = "rahul-glm-claude-setup.sh"
@@ -96,4 +108,3 @@ name = "Rahul's Gemma 4 + Ollama Setup"
 description = "Install Ollama + Gemma 4 AI model (auto-detects GPU/RAM, works on any Linux distro)"
 script = "rahul-gemma4-ollama-setup.sh"
 task_list = "I SS"
-
