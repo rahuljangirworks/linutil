@@ -128,7 +128,12 @@ BASE_STATE="${OPENCODE_SERVERS_STATE_BASE:-$HOME/.local/state/opencode-servers}"
 SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="$SYSTEMD_USER_DIR/opencode-server@.service"
 SHARED_CONFIG="$BASE_CONFIG/shared/opencode.json"
-OPENCODE_BIN="${OPENCODE_BIN:-$HOME/.npm-global/bin/opencode}"
+# Detect opencode binary: prefer command in PATH, fall back to npm-global, opencode dir, then default
+if command -v opencode >/dev/null 2>&1; then
+  OPENCODE_BIN="$(command -v opencode)"
+else
+  OPENCODE_BIN="${OPENCODE_BIN:-$HOME/.npm-global/bin/opencode}"
+fi
 RAHULOS_VAULT="${RAHULOS_VAULT:-$HOME/.work}"
 RAHULOS_WORKSPACE="${RAHULOS_WORKSPACE:-$HOME/work}"
 PORT_BASE=4095
