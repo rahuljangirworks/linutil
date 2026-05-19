@@ -310,21 +310,30 @@ logs_one() {
 }
 
 with_server_env() {
-  local number="$1"
-  require_server_number "$number"
-  local file="$(env_file "$number")"
-  if [ -f "$file" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$file"
-    set +a
-  fi
-  export XDG_CONFIG_HOME="$BASE_CONFIG/server-$number/config"
-  export XDG_DATA_HOME="$BASE_DATA/server-$number/data"
-  export XDG_STATE_HOME="$BASE_STATE/server-$number/state"
-  export OPENCODE_CONFIG="$SHARED_CONFIG"
-  mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$RAHULOS_VAULT" "$RAHULOS_WORKSPACE"
-}
+   local number="$1"
+   require_server_number "$number"
+   local file="$(env_file "$number")"
+   if [ -f "$file" ]; then
+     set -a
+     # shellcheck disable=SC1090
+     . "$file"
+     set +a
+   fi
+   export XDG_CONFIG_HOME="$BASE_CONFIG/server-$number/config"
+   export XDG_DATA_HOME="$BASE_DATA/server-$number/data"
+   export XDG_STATE_HOME="$BASE_STATE/server-$number/state"
+   export XDG_CACHE_HOME="$BASE_DATA/server-$number/cache"
+   export OPENCODE_TEST_HOME="$BASE_DATA/server-$number/home"
+   export OPENCODE_CLIENT="opencode-server-$number"
+   export OPENCODE_CONFIG="$XDG_CONFIG_HOME/opencode.json"
+   mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME" "$OPENCODE_TEST_HOME" "$RAHULOS_VAULT" "$RAHULOS_WORKSPACE"
+   
+   # Ensure each server has its own copy of the shared config
+   if [ ! -f "$OPENCODE_CONFIG" ]; then
+     mkdir -p "$(dirname "$OPENCODE_CONFIG")"
+     cp "$SHARED_CONFIG" "$OPENCODE_CONFIG" 2>/dev/null || true
+   fi
+ }
 
 serve_one() {
   local number="$1"
