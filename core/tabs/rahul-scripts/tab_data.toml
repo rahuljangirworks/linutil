@@ -90,6 +90,12 @@ script = "rahul-opencode-servers-setup.sh"
 task_list = "I SS"
 
 [[data]]
+name = "Rahul's GitHub Desktop Plus"
+description = "Install GitHub Desktop Plus (v3.5.9) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
+script = "rahul-github-desktop-plus.sh"
+task_list = "I"
+
+[[data]]
 name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
 script = "rahul-rofi-setup.sh"
