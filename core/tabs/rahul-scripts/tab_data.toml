@@ -22,9 +22,10 @@ script = "remote/tailscale-setup.sh"
 task_list = "I SS"
 
 [[data]]
-name = "Antigravity Fresh Refresh"
-description = "Fresh reset of Antigravity (clears cache/auth/tokens) while preserving all conversations, brain & memory"
-script = "rahul-antigravity-logout.sh"
+name = "Rahul's Antigravity IDE Reinstall"
+description = "Clean reinstall Antigravity IDE from scratch — removes all user data, downloads fresh copy, sets up desktop entry with icon"
+script = "rahul-antigravity-reinstall.sh"
+task_list = "I FM"
 
 [[data]]
 name = "GitHub SSH Key Gen & Connect"
@@ -72,11 +73,6 @@ description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
 script = "rahul-mybash-setup.sh"
 
 [[data]]
-name = "Rahul's Qwen Setup (deepseek-v3.2)"
-description = "Install Qwen from CLI, AgentRouter API, and set default deepseek-v3.2"
-script = "rahul-qwen-setup.sh"
-
-[[data]]
 name = "Rahul's AI Agent Stack"
 description = "Install ALL AI terminal agents: Qwen, Gemini CLI, Kilo Code, Aider, Cline (any Linux distro)"
 script = "rahul-ai-agents-setup.sh"
@@ -92,11 +88,6 @@ name = "Rahul's OpenCode Servers 1-5"
 description = "Install five local OpenCode servers with shared RahulOS filesystem MCP and isolated auth"
 script = "rahul-opencode-servers-setup.sh"
 task_list = "I SS"
-
-[[data]]
-name = "Rahul's GLM Claude Code Setup"
-description = "Install Claude Code CLI with Z.AI GLM models (glm-5.1, glm-4.5-air) — API key, settings, shell env"
-script = "rahul-glm-claude-setup.sh"
 
 [[data]]
 name = "Rahul's Rofi Setup"
