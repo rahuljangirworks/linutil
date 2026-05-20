@@ -90,6 +90,12 @@ script = "rahul-opencode-servers-setup.sh"
 task_list = "I SS"
 
 [[data]]
+name = "Rahul's AionUi Setup"
+description = "Install AionUi v1.9.25 — AI Cowork app for OpenCode, Claude Code, Gemini CLI, Qwen & 20+ more CLI agents"
+script = "rahul-aionui-setup.sh"
+task_list = "I"
+
+[[data]]
 name = "Rahul's GitHub Desktop Plus"
 description = "Install GitHub Desktop Plus (v3.5.9) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
 script = "rahul-github-desktop-plus.sh"
