@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Description: Install Claude Code & configure free-claude-code proxy for free DeepSeek-V4-Pro search & reasoning
+# Description: Install Claude Code & configure free-claude-code proxy for NVIDIA NIM Qwen3 Coder 480B
 # Works on: Arch, Debian, Fedora, openSUSE, Void, Alpine, Solus
 
 . ../common-script.sh
@@ -10,15 +10,17 @@ checkEnv
 # ─── Globals ──────────────────────────────────────────────────────────────────
 NPM_GLOBAL="$HOME/.npm-global"
 PIPX_BIN="$HOME/.local/bin"
+NIM_ROUTE="nvidia_nim/qwen/qwen3-coder-480b-a35b-instruct"
+NIM_DISPLAY_NAME="NVIDIA NIM Qwen3 Coder 480B"
 
 # ─── Header ──────────────────────────────────────────────────────────────────
 clear
 printf "%b\n" "${CYAN}=================================================================${RC}"
-printf "%b\n" "${YELLOW}    Claude Code + NVIDIA NIM (DeepSeek-V4-Pro) Setup             ${RC}"
+printf "%b\n" "${YELLOW}    Claude Code + NVIDIA NIM (Qwen3 Coder 480B) Setup            ${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${GREEN}  This script installs Anthropic's Claude Code CLI and configures${RC}"
-printf "%b\n" "${GREEN}  LiteLLM as a translation proxy to query DeepSeek-V4-Pro via${RC}"
-printf "%b\n" "${GREEN}  NVIDIA NIM for free search and reasoning.${RC}"
+printf "%b\n" "${GREEN}  free-claude-code as a local proxy to query Qwen3 Coder 480B${RC}"
+printf "%b\n" "${GREEN}  through NVIDIA NIM for free coding work.${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 echo ""
 
@@ -136,12 +138,38 @@ setup_npm_global() {
 install_claude() {
     printf "\n%b\n" "${CYAN}━━━ Installing Claude Code ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
     if command_exists claude; then
-        printf "%b\n" "${GREEN}[✓] Claude Code already installed${RC}"
+        printf "%b\n" "${YELLOW}[*] Claude Code already installed; updating to latest...${RC}"
+        setup_npm_global
+        npm install -g @anthropic-ai/claude-code@latest
+        printf "%b\n" "${GREEN}[✓] Claude Code updated — $(claude --version 2>/dev/null || echo installed)${RC}"
     else
         printf "%b\n" "${YELLOW}[*] Installing @anthropic-ai/claude-code globally...${RC}"
         setup_npm_global
-        npm install -g @anthropic-ai/claude-code
+        npm install -g @anthropic-ai/claude-code@latest
         printf "%b\n" "${GREEN}[✓] Claude Code installed!${RC}"
+    fi
+}
+
+# ─── Configure: Claude Code settings ─────────────────────────────────────────
+configure_claude_settings() {
+    # Avoid /doctor reporting "Auto-updates: disabled (config)" after setup.
+    if command_exists node; then
+        node <<'NODE'
+const fs = require("fs");
+const path = `${process.env.HOME}/.claude.json`;
+let config = {};
+if (fs.existsSync(path)) {
+  try {
+    config = JSON.parse(fs.readFileSync(path, "utf8"));
+  } catch {
+    config = {};
+  }
+}
+config.installMethod = config.installMethod || "global";
+config.autoUpdates = true;
+fs.writeFileSync(path, JSON.stringify(config, null, 2) + "\n");
+NODE
+        printf "%b\n" "${GREEN}[✓] Claude Code auto-updates enabled in ~/.claude.json${RC}"
     fi
 }
 
@@ -208,9 +236,9 @@ EOF
     if [ -f "$HOME/.fcc/.env" ]; then
         printf "%b\n" "${CYAN}[*] Configuring free-claude-code proxy...${RC}"
         sed -i "s|^NVIDIA_NIM_API_KEY=.*|NVIDIA_NIM_API_KEY=\"$API_KEY\"|" "$HOME/.fcc/.env"
-        sed -i 's|^MODEL=.*|MODEL="nvidia_nim/deepseek-ai/deepseek-v4-pro"|' "$HOME/.fcc/.env"
+        sed -i "s|^MODEL=.*|MODEL=\"$NIM_ROUTE\"|" "$HOME/.fcc/.env"
         sed -i 's|^FCC_OPEN_BROWSER=.*|FCC_OPEN_BROWSER=false|' "$HOME/.fcc/.env"
-        printf "%b\n" "${GREEN}[✓] free-claude-code configured with NVIDIA NIM${RC}"
+        printf "%b\n" "${GREEN}[✓] free-claude-code configured with $NIM_DISPLAY_NAME${RC}"
     fi
 
     # Create the wrapper script at ~/.local/bin/claude-nim
@@ -234,7 +262,16 @@ fi
 # Check if free-claude-code proxy is already running
 if ! curl -s -m 1 "http://localhost:${PROXY_PORT}/health" >/dev/null 2>&1; then
     echo "Starting free-claude-code proxy (NVIDIA NIM)..."
-    FCC_OPEN_BROWSER=false fcc-server > /tmp/fcc-proxy.log 2>&1 &
+    env \
+        -u NVIDIA_NIM_API_KEY \
+        -u OPENROUTER_API_KEY \
+        -u DEEPSEEK_API_KEY \
+        -u KIMI_API_KEY \
+        -u WAFER_API_KEY \
+        -u OPENCODE_API_KEY \
+        -u ZAI_API_KEY \
+        -u FIREWORKS_API_KEY \
+        FCC_OPEN_BROWSER=false fcc-server > /tmp/fcc-proxy.log 2>&1 &
     FCC_PID=$!
     PROXY_STARTED_BY_US=true
 
@@ -254,12 +291,27 @@ if ! curl -s -m 1 "http://localhost:${PROXY_PORT}/health" >/dev/null 2>&1; then
     echo "Proxy is running on port ${PROXY_PORT}."
 fi
 
-# Point Claude Code to the local proxy
+# Clear provider settings from other Claude setup scripts, then point Claude Code
+# to the local NVIDIA NIM proxy. NVIDIA's Claude Code integration guide maps
+# built-in Claude aliases to the NIM model so background tasks do not fall back
+# to Anthropic model IDs.
+unset ANTHROPIC_API_KEY
+unset CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+NIM_MODEL="anthropic/nvidia_nim/qwen/qwen3-coder-480b-a35b-instruct"
 export ANTHROPIC_BASE_URL="http://localhost:${PROXY_PORT}"
 export ANTHROPIC_AUTH_TOKEN="freecc"
+export ANTHROPIC_CUSTOM_MODEL_OPTION="${NIM_MODEL}"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="NVIDIA NIM Qwen3 Coder 480B"
+export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Qwen3 Coder 480B through local Free Claude Code proxy"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="${NIM_MODEL}"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="${NIM_MODEL}"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="${NIM_MODEL}"
+export CLAUDE_CODE_SUBAGENT_MODEL="${NIM_MODEL}"
+export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY="1"
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW="190000"
 
 # Run Claude Code
-echo "Launching Claude Code (NVIDIA NIM - DeepSeek-V4-Pro)..."
+echo "Launching Claude Code (NVIDIA NIM - Qwen3 Coder 480B)..."
 claude "$@"
 
 # Clean up proxy if we started it
@@ -306,7 +358,7 @@ print_summary() {
     printf "%b\n" "${CYAN}    2. Run: claude-nim${RC}"
     echo ""
     printf "%b\n" "${GREEN}  This will automatically start the free-claude-code proxy,${RC}"
-    printf "%b\n" "${GREEN}  run Claude Code pointing to NVIDIA NIM DeepSeek-V4-Pro,${RC}"
+    printf "%b\n" "${GREEN}  run Claude Code pointing to NVIDIA NIM Qwen3 Coder 480B,${RC}"
     printf "%b\n" "${GREEN}  and stop the proxy when you exit.${RC}"
     printf "%b\n" "${CYAN}=================================================================${RC}"
 }
@@ -315,8 +367,8 @@ print_summary() {
 install_node
 install_uv
 install_claude
+configure_claude_settings
 install_fcc
 configure_key_and_proxy
 persist_paths
 print_summary
-

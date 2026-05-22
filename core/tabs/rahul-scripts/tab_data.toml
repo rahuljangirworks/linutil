@@ -114,5 +114,5 @@ task_list = "I SS"
 
 [[data]]
 name = "Claude Code + NVIDIA NIM Setup"
-description = "Install Claude Code and configure free-claude-code proxy for free DeepSeek-V4-Pro search & reasoning"
+description = "Install Claude Code and configure free-claude-code proxy for NVIDIA NIM Qwen3 Coder 480B"
 script = "rahul-claude-nvidia-setup.sh"
