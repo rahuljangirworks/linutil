@@ -208,6 +208,19 @@ EOF
 # Wrapper script for Claude Code with NVIDIA NIM DeepSeek-V4-Pro
 
 if [ -z "$NVIDIA_API_KEY" ]; then
+    # Try parsing it from shell configurations
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [ -f "$rc" ]; then
+            KEY_VAL=$(grep 'export NVIDIA_API_KEY=' "$rc" | cut -d'"' -f2)
+            if [ -n "$KEY_VAL" ]; then
+                export NVIDIA_API_KEY="$KEY_VAL"
+                break
+            fi
+        fi
+    done
+fi
+
+if [ -z "$NVIDIA_API_KEY" ]; then
     echo "Error: NVIDIA_API_KEY environment variable is not set."
     echo "Please run the setup script or export it manually."
     exit 1
