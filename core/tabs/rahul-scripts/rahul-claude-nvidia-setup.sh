@@ -145,23 +145,36 @@ install_claude() {
     fi
 }
 
-# ─── Install: LiteLLM ─────────────────────────────────────────────────────────
-install_litellm() {
-    printf "\n%b\n" "${CYAN}━━━ Installing LiteLLM Proxy ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
-    if command_exists litellm; then
-        printf "%b\n" "${GREEN}[✓] LiteLLM already installed${RC}"
+# ─── Dependency: uv (Python package manager) ─────────────────────────────────
+install_uv() {
+    printf "\n%b\n" "${CYAN}━━━ Installing uv Package Manager ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
+    if command_exists uv; then
+        printf "%b\n" "${GREEN}[✓] uv already installed${RC}"
     else
-        printf "%b\n" "${YELLOW}[*] Installing LiteLLM via pipx...${RC}"
-        export PATH="$PIPX_BIN:$PATH"
-        pipx install 'litellm[proxy]'
-        printf "%b\n" "${GREEN}[✓] LiteLLM installed!${RC}"
+        printf "%b\n" "${YELLOW}[*] Installing uv...${RC}"
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
+        printf "%b\n" "${GREEN}[✓] uv installed!${RC}"
     fi
 }
 
-# ─── Configure: NVIDIA API Key & LiteLLM Config ────────────────────────────────
+# ─── Install: free-claude-code proxy ──────────────────────────────────────────
+install_fcc() {
+    printf "\n%b\n" "${CYAN}━━━ Installing free-claude-code Proxy ━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
+    if command_exists fcc-server; then
+        printf "%b\n" "${GREEN}[✓] free-claude-code already installed${RC}"
+    else
+        printf "%b\n" "${YELLOW}[*] Installing free-claude-code via uv...${RC}"
+        export PATH="$HOME/.local/bin:$PATH"
+        uv tool install --force git+https://github.com/Alishahryar1/free-claude-code.git
+        printf "%b\n" "${GREEN}[✓] free-claude-code installed!${RC}"
+    fi
+}
+
+# ─── Configure: NVIDIA API Key & free-claude-code ─────────────────────────────
 configure_key_and_proxy() {
     printf "\n%b\n" "${CYAN}━━━ API & Proxy Configuration ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
-    
+
     # Prompt for key
     printf "%b\n" "${YELLOW}Enter your NVIDIA API Key (nvapi-...):${RC}"
     read -r API_KEY
@@ -186,85 +199,75 @@ EOF
     done
     export NVIDIA_API_KEY="$API_KEY"
 
-    # Create config directory for LiteLLM
-    mkdir -p "$HOME/.config/litellm"
+    # Initialize free-claude-code config if not present
+    if [ ! -f "$HOME/.fcc/.env" ]; then
+        fcc-init 2>/dev/null || true
+    fi
 
-    # Write config.yaml
-    printf "%b\n" "${CYAN}[*] Writing LiteLLM configuration to ~/.config/litellm/config.yaml...${RC}"
-    cat > "$HOME/.config/litellm/config.yaml" <<EOF
-model_list:
-  - model_name: deepseek-chat
-    litellm_params:
-      model: openai/deepseek-ai/deepseek-v4-pro
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: "os.environ/NVIDIA_API_KEY"
-EOF
+    # Write NVIDIA key and model into free-claude-code config
+    if [ -f "$HOME/.fcc/.env" ]; then
+        printf "%b\n" "${CYAN}[*] Configuring free-claude-code proxy...${RC}"
+        sed -i "s|^NVIDIA_NIM_API_KEY=.*|NVIDIA_NIM_API_KEY=\"$API_KEY\"|" "$HOME/.fcc/.env"
+        sed -i 's|^MODEL=.*|MODEL="nvidia_nim/deepseek-ai/deepseek-v4-pro"|' "$HOME/.fcc/.env"
+        sed -i 's|^FCC_OPEN_BROWSER=.*|FCC_OPEN_BROWSER=false|' "$HOME/.fcc/.env"
+        printf "%b\n" "${GREEN}[✓] free-claude-code configured with NVIDIA NIM${RC}"
+    fi
 
     # Create the wrapper script at ~/.local/bin/claude-nim
     mkdir -p "$HOME/.local/bin"
     printf "%b\n" "${CYAN}[*] Creating wrapper script at ~/.local/bin/claude-nim...${RC}"
-    cat > "$HOME/.local/bin/claude-nim" <<'EOF'
+    cat > "$HOME/.local/bin/claude-nim" <<'WRAPPER'
 #!/bin/bash
-# Wrapper script for Claude Code with NVIDIA NIM DeepSeek-V4-Pro
+# Wrapper script for Claude Code with NVIDIA NIM via free-claude-code proxy
+# Uses: https://github.com/Alishahryar1/free-claude-code
 
-if [ -z "$NVIDIA_API_KEY" ]; then
-    # Try parsing it from shell configurations
-    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-        if [ -f "$rc" ]; then
-            KEY_VAL=$(grep 'export NVIDIA_API_KEY=' "$rc" | cut -d'"' -f2)
-            if [ -n "$KEY_VAL" ]; then
-                export NVIDIA_API_KEY="$KEY_VAL"
-                break
-            fi
-        fi
-    done
-fi
+PROXY_PORT=8082
+PROXY_STARTED_BY_US=false
 
-if [ -z "$NVIDIA_API_KEY" ]; then
-    echo "Error: NVIDIA_API_KEY environment variable is not set."
-    echo "Please run the setup script or export it manually."
+# Check if fcc-server is installed
+if ! command -v fcc-server &>/dev/null; then
+    echo "Error: fcc-server is not installed."
+    echo "Install it with: uv tool install --force git+https://github.com/Alishahryar1/free-claude-code.git"
     exit 1
 fi
 
-PROXY_STARTED_BY_US=false
-
-# Check if LiteLLM is already running on port 4000
-if ! curl -s -m 1 http://localhost:4000/health >/dev/null 2>&1; then
-    echo "Starting LiteLLM Translation Proxy..."
-    # Start proxy in the background
-    litellm --config "$HOME/.config/litellm/config.yaml" --port 4000 > /tmp/litellm-proxy.log 2>&1 &
-    LITELLM_PID=$!
+# Check if free-claude-code proxy is already running
+if ! curl -s -m 1 "http://localhost:${PROXY_PORT}/health" >/dev/null 2>&1; then
+    echo "Starting free-claude-code proxy (NVIDIA NIM)..."
+    FCC_OPEN_BROWSER=false fcc-server > /tmp/fcc-proxy.log 2>&1 &
+    FCC_PID=$!
     PROXY_STARTED_BY_US=true
 
-    # Wait for the proxy to boot
-    for i in {1..20}; do
-        if curl -s -m 1 http://localhost:4000/health >/dev/null 2>&1; then
+    # Wait for the proxy to boot (~2-4 seconds)
+    for i in $(seq 1 15); do
+        if curl -s -m 1 "http://localhost:${PROXY_PORT}/health" >/dev/null 2>&1; then
             break
         fi
         sleep 0.5
     done
 
-    if ! curl -s -m 1 http://localhost:4000/health >/dev/null 2>&1; then
-        echo "Error: LiteLLM Proxy failed to start. Check /tmp/litellm-proxy.log"
+    if ! curl -s -m 1 "http://localhost:${PROXY_PORT}/health" >/dev/null 2>&1; then
+        echo "Error: free-claude-code proxy failed to start. Check /tmp/fcc-proxy.log"
+        kill "$FCC_PID" 2>/dev/null
         exit 1
     fi
-    echo "LiteLLM Proxy is running."
+    echo "Proxy is running on port ${PROXY_PORT}."
 fi
 
 # Point Claude Code to the local proxy
-export ANTHROPIC_BASE_URL="http://localhost:4000"
-export ANTHROPIC_API_KEY="sk-12345"
+export ANTHROPIC_BASE_URL="http://localhost:${PROXY_PORT}"
+export ANTHROPIC_AUTH_TOKEN="freecc"
 
 # Run Claude Code
 echo "Launching Claude Code (NVIDIA NIM - DeepSeek-V4-Pro)..."
-claude --model deepseek-chat "$@"
+claude "$@"
 
 # Clean up proxy if we started it
 if [ "$PROXY_STARTED_BY_US" = true ]; then
-    echo "Stopping LiteLLM Translation Proxy..."
-    kill "$LITELLM_PID" 2>/dev/null
+    echo "Stopping free-claude-code proxy..."
+    kill "$FCC_PID" 2>/dev/null
 fi
-EOF
+WRAPPER
 
     chmod +x "$HOME/.local/bin/claude-nim"
     printf "%b\n" "${GREEN}[✓] Wrapper script created and made executable${RC}"
@@ -302,16 +305,18 @@ print_summary() {
     printf "%b\n" "${CYAN}    1. Restart your terminal (or run 'source ~/.bashrc')${RC}"
     printf "%b\n" "${CYAN}    2. Run: claude-nim${RC}"
     echo ""
-    printf "%b\n" "${GREEN}  This will automatically start LiteLLM, run Claude Code pointing${RC}"
-    printf "%b\n" "${GREEN}  to NVIDIA NIM DeepSeek-V4-Pro, and stop LiteLLM when you exit.${RC}"
+    printf "%b\n" "${GREEN}  This will automatically start the free-claude-code proxy,${RC}"
+    printf "%b\n" "${GREEN}  run Claude Code pointing to NVIDIA NIM DeepSeek-V4-Pro,${RC}"
+    printf "%b\n" "${GREEN}  and stop the proxy when you exit.${RC}"
     printf "%b\n" "${CYAN}=================================================================${RC}"
 }
 
 # ─── Main Execution ──────────────────────────────────────────────────────────
 install_node
-install_python
+install_uv
 install_claude
-install_litellm
+install_fcc
 configure_key_and_proxy
 persist_paths
 print_summary
+
