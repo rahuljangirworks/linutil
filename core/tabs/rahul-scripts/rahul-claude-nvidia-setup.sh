@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Description: Install Claude Code & configure LiteLLM proxy for free DeepSeek-V4-Pro search & reasoning
+# Description: Install Claude Code & configure free-claude-code proxy for free DeepSeek-V4-Pro search & reasoning
 # Works on: Arch, Debian, Fedora, openSUSE, Void, Alpine, Solus
 
 . ../common-script.sh
