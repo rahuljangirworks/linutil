@@ -102,6 +102,12 @@ script = "rahul-github-desktop-plus.sh"
 task_list = "I"
 
 [[data]]
+name = "Rahul's Cursor Desktop Setup"
+description = "Install Cursor Desktop v3.5 from official golden .deb (AI code editor, desktop entry, /usr/bin/cursor)"
+script = "rahul-cursor-desktop-setup.sh"
+task_list = "I FM"
+
+[[data]]
 name = "Rahul's Rofi Setup"
 description = "Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul"
 script = "rahul-rofi-setup.sh"
