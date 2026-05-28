@@ -20,6 +20,8 @@
 - **Rahul's Kitty Setup**: Install Kitty with Rahul's Nord theme config from dwm-rahul
 - **Rahul's MyBash Setup**: Install Rahul's customized mybash with Starship, fzf, zoxide
 - **Rahul's Qwen Setup (deepseek-v3.2)**: Install Qwen from CLI, AgentRouter API, and set default deepseek-v3.2
+- **Rahul's Incus / LXC Setup**: Install Incus system containers with proper idmap, storage, network, and Hermes fleet folders
+- **Rahul's Hermes Fleet Setup**: Create isolated Hermes agent containers using Incus with safe secrets, brain, and worktree mounts
 - **Rahul's Rofi Setup**: Install Rofi with Rahul's Nord theme and powermenu from dwm-rahul
 
 ## Applications Setup
