@@ -24,9 +24,9 @@ printf "%b\n" "${YELLOW}      Rahul's isolated Hermes Fleet Container Provisione
 printf "%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${GREEN}  - Configures secure per-agent directories under ~/.hermes-fleet${RC}"
 printf "%b\n" "${GREEN}  - Localizes secret providers.env template without duplication ${RC}"
-printf "%b\n" "${GREEN}  - Clones clean isolated workspace branches for each agent     ${RC}"
+printf "%b\n" "${GREEN}  - Bind-mounts real ~/work (RW) into every container directly  ${RC}"
 printf "%b\n" "${GREEN}  - Launches and configures unprivileged Incus CTs idempotently ${RC}"
-printf "%b\n" "${GREEN}  - Hooks up read-only brain and writable worktree directories  ${RC}"
+printf "%b\n" "${GREEN}  - Hooks up read-only vault brain and writable host workspace   ${RC}"
 printf "%b\n" "${GREEN}  - Installs hermes-agent virtualenv and initializes systemd    ${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 echo ""
@@ -75,12 +75,11 @@ ensure_fleet_dirs() {
     mkdir -p "$HERMES_FLEET_DIR/logs" "$HERMES_FLEET_DIR/backups"
     chmod 700 "$HERMES_FLEET_DIR/logs" "$HERMES_FLEET_DIR/backups"
 
-    # Ensure container directories exist
+    # Ensure per-agent data directories exist
+    # NOTE: No worktree clones — containers bind-mount the real ~/work directly.
     for container in hermes-haraka hermes-office hermes-client hermes-personal; do
         mkdir -p "$HERMES_FLEET_DIR/agents/$container/data"
-        mkdir -p "$HERMES_FLEET_DIR/worktrees/$container"
         chmod 700 "$HERMES_FLEET_DIR/agents/$container"
-        chmod 700 "$HERMES_FLEET_DIR/worktrees/$container"
     done
 
     printf "%b\n" "${GREEN}[✓] Fleet directories initialized and secured${RC}"
@@ -159,36 +158,11 @@ EOF
     fi
 }
 
-clone_workspaces() {
-    container="$1"
-    scope_dir="$2"
-    host_scope_path="$TARGET_HOME/work/$scope_dir"
-    worktree_base="$HERMES_FLEET_DIR/worktrees/$container"
-
-    if [ ! -d "$host_scope_path" ]; then
-        printf "%b\n" "${YELLOW}[~] Host scope path '$host_scope_path' does not exist; skipping cloning${RC}"
-        return
-    fi
-
-    printf "%b\n" "${CYAN}━━━ Cloning repositories for $container ━━━━━━━━━━━━━━━━━━━━━━${RC}"
-    for repo_path in "$host_scope_path"/*; do
-        if [ -d "$repo_path/.git" ]; then
-            repo_name="$(basename "$repo_path")"
-            target_clone_path="$worktree_base/$repo_name"
-
-            if [ ! -d "$target_clone_path" ]; then
-                printf "%b\n" "${YELLOW}[*] Cloning $repo_name to worktree...${RC}"
-                if git clone "$repo_path" "$target_clone_path"; then
-                    printf "%b\n" "${GREEN}[✓] Cloned $repo_name${RC}"
-                else
-                    printf "%b\n" "${RED}[✗] Failed to clone $repo_name${RC}"
-                fi
-            else
-                printf "%b\n" "${GREEN}[✓] Workspace $repo_name already exists in worktree${RC}"
-            fi
-        fi
-    done
-}
+# NOTE: clone_workspaces() removed.
+# Containers now bind-mount the real ~/work host directory (RW) directly,
+# so code changes inside the container are immediately visible on the host
+# and to all other containers — no cloning, no sync delay.
+# See ensure_disk_device "workspace" in setup_container() below.
 
 ensure_disk_device() {
     container="$1"
@@ -206,6 +180,20 @@ ensure_disk_device() {
         incus_ctl config device add "$container" "$dev_name" disk \
             source="$source_path" path="$target_path" readonly="$readonly_val" shift=true
     fi
+}
+
+ensure_proxy_device() {
+    container="$1"
+    dev_name="$2"
+    listen_addr="$3"
+    connect_addr="$4"
+
+    if incus_ctl config device get "$container" "$dev_name" type >/dev/null 2>&1; then
+        return 0
+    fi
+
+    incus_ctl config device add "$container" "$dev_name" proxy \
+        listen="$listen_addr" connect="$connect_addr"
 }
 
 sync_opencode_zen_pool() {
@@ -229,7 +217,7 @@ sync_opencode_zen_pool() {
 
     existing_auth=""
     if [ -x /usr/local/bin/hermes ]; then
-        existing_auth=$(sudo -u rahul env HERMES_HOME=/opt/data /usr/local/bin/hermes auth list opencode-zen 2>/dev/null || true)
+        existing_auth=$(su - rahul -c "cd /home/rahul && HERMES_HOME=/opt/data /usr/local/bin/hermes auth list opencode-zen" 2>/dev/null || true)
     fi
 
     # Check for duplicate labels strictly from list output column 2
@@ -264,8 +252,7 @@ sync_opencode_zen_pool() {
             rm -f /tmp/hermes-auth-err.log
 
             # 1. Try with label and correct argument order (provider opencode-zen at the end)
-            sudo -u rahul env HERMES_HOME=/opt/data /usr/local/bin/hermes auth add \
-                --type api-key --api-key "$key" --label "$label" opencode-zen >/tmp/hermes-auth-err.log 2>&1
+            su - rahul -c "cd /home/rahul && HERMES_HOME=/opt/data /usr/local/bin/hermes auth add --type api-key --api-key '$key' --label '$label' opencode-zen" >/tmp/hermes-auth-err.log 2>&1
             status=$?
 
             if [ "$status" = "0" ]; then
@@ -275,8 +262,7 @@ sync_opencode_zen_pool() {
                 if grep -qi "unrecognized arguments: --label" /tmp/hermes-auth-err.log; then
                     label_support_failed=1
                     # 2. Try fallback without label
-                    sudo -u rahul env HERMES_HOME=/opt/data /usr/local/bin/hermes auth add \
-                        --type api-key --api-key "$key" opencode-zen >/tmp/hermes-auth-err.log 2>&1
+                    su - rahul -c "cd /home/rahul && HERMES_HOME=/opt/data /usr/local/bin/hermes auth add --type api-key --api-key '$key' opencode-zen" >/tmp/hermes-auth-err.log 2>&1
                     status=$?
                     if [ "$status" = "0" ]; then
                         keys_synced=$((keys_synced + 1))
@@ -352,37 +338,48 @@ setup_container() {
     # Seed profile data
     seed_profile "$container" "$profile_name"
 
-    # Setup worktrees if scope exists
-    if [ -n "$scope_dir" ]; then
-        clone_workspaces "$container" "$scope_dir"
-    fi
+    # ── Disk mounts ──────────────────────────────────────────────────────────
+    # /opt/data        → per-agent Hermes config/data (RW, isolated per agent)
+    # /opt/hermes-agent → hermes-agent source binary   (RO, shared read)
+    # /home/rahul/work → REAL host ~/work workspace    (RW, bind-mount — code
+    #                    changes are IMMEDIATELY on the host disk, no clone!)
+    # /home/rahul/.work → vault brain                  (RO by default; Haraka
+    #                    may get RW if RAHUL_HARAKA_BRAIN_WRITE=1)
+    # ─────────────────────────────────────────────────────────────────────────
+    ensure_disk_device "$container" data        "$HERMES_FLEET_DIR/agents/$container/data" /opt/data          false
+    ensure_disk_device "$container" hermes-agent "$HERMES_AGENT_SRC"                        /opt/hermes-agent  true
 
-    # Add disk mounts
-    ensure_disk_device "$container" data "$HERMES_FLEET_DIR/agents/$container/data" /opt/data false
-    ensure_disk_device "$container" hermes-agent "$HERMES_AGENT_SRC" /opt/hermes-agent true
-    ensure_disk_device "$container" workspace "$HERMES_FLEET_DIR/worktrees/$container" /home/rahul/work false
+    # FIX: mount the real host ~/work directory, NOT a worktree clone.
+    # This ensures code edits inside the container go directly to the host
+    # filesystem and are visible to all other containers and the host instantly.
+    ensure_disk_device "$container" workspace   "$TARGET_HOME/work"                         /home/rahul/work   false
 
-    # Main brain mounting path logic
+    # Brain mount: full vault RO for all agents.
+    # Buddy agents can READ the full vault (cross-scope context is useful).
+    # The RO flag enforces the write gate — vault writes must go through Git.
     brain_readonly=true
     if [ "$container" = "hermes-haraka" ]; then
         brain_readonly="$haraka_write"
-        ensure_disk_device "$container" brain "$TARGET_HOME/.work" /home/rahul/.work "$brain_readonly"
-    else
-        # For buddies, mount their specific scope subdirectory
-        if [ -n "$scope_dir" ] && [ -d "$TARGET_HOME/.work/$scope_dir" ]; then
-            ensure_disk_device "$container" brain "$TARGET_HOME/.work/$scope_dir" "/home/rahul/.work/$scope_dir" true
-        else
-            ensure_disk_device "$container" brain "$TARGET_HOME/.work" /home/rahul/.work true
-        fi
+        ensure_proxy_device "$container" dashboard "tcp:127.0.0.1:9119" "tcp:127.0.0.1:9119"
     fi
+    ensure_disk_device "$container" brain "$TARGET_HOME/.work" /home/rahul/.work "$brain_readonly"
 
-    printf "%b\n" "${GREEN}[✓] Disk devices mapped with shift=true${RC}"
+    printf "%b\n" "${GREEN}[✓] Disk and proxy devices mapped with shift=true${RC}"
+    printf "%b\n" "  workspace → bind-mount of $TARGET_HOME/work (RW, real host dir)"
+    printf "%b\n" "  brain     → bind-mount of $TARGET_HOME/.work (readonly=$brain_readonly)"
 
     # Boot container if stopped
     if ! incus_ctl info "$container" 2>/dev/null | grep -q "Status: RUNNING"; then
         incus_ctl start "$container"
         sleep 2
     fi
+
+    # Stop gateway service and kill any running hermes processes to avoid directory locks
+    printf "%b\n" "${YELLOW}[*] Stopping gateway and cleaning old processes inside container...${RC}"
+    incus_ctl exec "$container" -- systemctl stop hermes-gateway.service 2>/dev/null || true
+    incus_ctl exec "$container" -- pkill -9 -f "tui_gateway.entry" || true
+    incus_ctl exec "$container" -- pkill -9 -f "ui-tui" || true
+    incus_ctl exec "$container" -- pkill -9 -f "hermes" || true
 
     # Provision container
     printf "%b\n" "${YELLOW}[*] Provisioning container environment...${RC}"
@@ -410,7 +407,12 @@ setup_container() {
 
     # Make mounts owned by rahul safely
     incus_ctl exec "$container" -- chown -R rahul:rahul /opt/data
-    incus_ctl exec "$container" -- chown -R rahul:rahul /home/rahul/work
+    # NOTE: We do NOT recursively chown /home/rahul/work — it is a bind-mount
+    # of the real host ~/work directory. A recursive chown here would change
+    # ownership on the host disk, which is destructive. The container user
+    # (rahul uid=1000) already matches the host user, so access works via the
+    # shift=true UID mapping set on the disk device.
+    printf "%b\n" "${YELLOW}[~] Skipping chown on /home/rahul/work (real host bind-mount — shift=true handles UID mapping)${RC}"
 
     # Sync gitconfig if exists
     if [ -f "$TARGET_HOME/.gitconfig" ]; then
@@ -425,13 +427,28 @@ setup_container() {
     fi
     '
 
-    # Copy read-only source into a writable build directory to avoid pip write errors
+    # Copy read-only source into a persistent writable directory to allow editable install
     incus_ctl exec "$container" -- sh -c '
-    rm -rf /tmp/hermes-agent-build
-    mkdir -p /tmp/hermes-agent-build
-    cp -a /opt/hermes-agent/. /tmp/hermes-agent-build/
-    chown -R rahul:rahul /tmp/hermes-agent-build
+    rm -rf /home/rahul/hermes-agent-src
+    mkdir -p /home/rahul/hermes-agent-src
+    cp -a /opt/hermes-agent/. /home/rahul/hermes-agent-src/
+    chown -R rahul:rahul /home/rahul/hermes-agent-src
     '
+
+    # Apply local patch to web_server.py to resolve the dashboard embedded TUI cwd issue
+    incus_ctl exec "$container" -- python3 -c '
+from pathlib import Path
+p = Path("/home/rahul/hermes-agent-src/hermes_cli/web_server.py")
+if p.exists():
+    content = p.read_text()
+    old = "argv, cwd = _make_tui_argv(PROJECT_ROOT / \"ui-tui\", tui_dev=False)"
+    new = "argv, _ = _make_tui_argv(PROJECT_ROOT / \"ui-tui\", tui_dev=False); cwd = Path(os.environ.get(\"HERMES_DASHBOARD_TUI_CWD\", str(Path.home())))"
+    if old in content:
+        p.write_text(content.replace(old, new))
+        print("[✓] Patched web_server.py in container")
+    else:
+        print("[~] Target pattern not found in web_server.py")
+'
 
     # Install hermes inside container virtualenv
     printf "%b\n" "${YELLOW}[*] Installing hermes-agent to container virtualenv...${RC}"
@@ -440,9 +457,20 @@ setup_container() {
         python3 -m venv /home/rahul/.hermes-venv
     fi
     /home/rahul/.hermes-venv/bin/pip install -q --upgrade pip
-    /home/rahul/.hermes-venv/bin/pip install -q /tmp/hermes-agent-build
-    /home/rahul/.hermes-venv/bin/pip install -q PyYAML
     '
+
+    if [ "$container" = "hermes-haraka" ]; then
+        printf "%b\n" "${YELLOW}[*] Installing hermes-agent with dashboard dependencies into hermes-haraka...${RC}"
+        incus_ctl exec "$container" -- su - rahul -c '
+        /home/rahul/.hermes-venv/bin/pip install -q -e /home/rahul/hermes-agent-src
+        /home/rahul/.hermes-venv/bin/pip install -q fastapi "uvicorn[standard]" websockets PyYAML ptyprocess
+        '
+    else
+        incus_ctl exec "$container" -- su - rahul -c '
+        /home/rahul/.hermes-venv/bin/pip install -q -e /home/rahul/hermes-agent-src
+        /home/rahul/.hermes-venv/bin/pip install -q PyYAML
+        '
+    fi
 
     # Update config.yaml using container Python environment
     printf "%b\n" "${YELLOW}[*] Updating config.yaml with OpenCode Zen default config inside container...${RC}"
@@ -515,8 +543,19 @@ systemctl daemon-reload'
 
     if [ "$config_valid" = "true" ]; then
         if [ "$container" = "hermes-haraka" ]; then
+            # Clean old dashboard/TUI child processes inside hermes-haraka before startup
+            printf "%b\n" "${YELLOW}[*] Cleaning old dashboard/TUI child processes inside hermes-haraka...${RC}"
+            incus_ctl exec "$container" -- pkill -9 -f "tui_gateway.entry" || true
+            incus_ctl exec "$container" -- pkill -9 -f "ui-tui" || true
+            incus_ctl exec "$container" -- pkill -9 -f "hermes dashboard" || true
+
             incus_ctl exec "$container" -- systemctl enable --now hermes-gateway.service
             printf "%b\n" "${GREEN}[✓] Started hermes-gateway.service on hermes-haraka${RC}"
+
+            # Start dashboard in background
+            printf "%b\n" "${YELLOW}[*] Starting hermes dashboard inside hermes-haraka...${RC}"
+            incus_ctl exec "$container" -- su - rahul -c "cd /home/rahul && HERMES_HOME=/opt/data HERMES_DASHBOARD_TUI=1 HERMES_DASHBOARD_TUI_CWD=/home/rahul HERMES_TUI_INLINE=0 nohup hermes dashboard --host 127.0.0.1 --port 9119 --no-open > /opt/data/dashboard.log 2>&1 &"
+            sleep 2
         else
             incus_ctl exec "$container" -- systemctl disable --now hermes-gateway.service 2>/dev/null || true
             printf "%b\n" "${YELLOW}[~] Disabled hermes-gateway.service on $container (CLI-ready mode)${RC}"
@@ -553,26 +592,45 @@ ensure_fleet_dirs
 ensure_canonical_secrets
 
 # 3. Setup four container fleet
-setup_container hermes-haraka haraka "" "$haraka_brain_readonly"
-setup_container hermes-office office-buddy office-projacts true
-setup_container hermes-client client-buddy client-projacts true
-setup_container hermes-personal personal-buddy personal-projacts true
+# scope_dir arg is now unused (no more worktree cloning) but kept for
+# future filtering use; pass empty string to all containers.
+setup_container hermes-haraka  haraka         "" "$haraka_brain_readonly"
+setup_container hermes-office  office-buddy   "" "true"
+setup_container hermes-client  client-buddy   "" "true"
+setup_container hermes-personal personal-buddy "" "true"
 
 printf "\n%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${GREEN}Rahul's Hermes Fleet Provisioning has completed successfully.${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${YELLOW}Verification Commands:${RC}"
-printf "%b\n" "  incus exec hermes-haraka -- hermes --version"
-printf "%b\n" "  incus exec hermes-office -- hermes --version"
-printf "%b\n" "  incus exec hermes-client -- hermes --version"
-printf "%b\n" "  incus exec hermes-personal -- hermes --version"
+printf "%b\n" "  incus exec hermes-haraka -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes --version\""
+printf "%b\n" "  incus exec hermes-office -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes --version\""
+printf "%b\n" "  incus exec hermes-client -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes --version\""
+printf "%b\n" "  incus exec hermes-personal -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes --version\""
 printf "%b\n" ""
 printf "%b\n" "  incus exec hermes-haraka -- /home/rahul/.hermes-venv/bin/python -c \"import yaml; d=yaml.safe_load(open('/opt/data/config.yaml')); print(d['model']['provider'], d['model']['default'], d['credential_pool_strategies']['opencode-zen'])\""
 printf "%b\n" ""
-printf "%b\n" "  incus exec hermes-haraka -- sudo -u rahul env HERMES_HOME=/opt/data hermes auth list opencode-zen"
+printf "%b\n" "  incus exec hermes-haraka -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes auth list opencode-zen\""
+printf "%b\n" ""
+printf "%b\n" "  incus exec hermes-haraka -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes -m deepseek-v4-flash-free --provider opencode-zen -z 'Reply with exactly: haraka ok'\""
+printf "%b\n" "  incus exec hermes-office -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes -m deepseek-v4-flash-free --provider opencode-zen -z 'Reply with exactly: office ok'\""
+printf "%b\n" "  incus exec hermes-client -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes -m deepseek-v4-flash-free --provider opencode-zen -z 'Reply with exactly: client ok'\""
+printf "%b\n" "  incus exec hermes-personal -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data hermes -m deepseek-v4-flash-free --provider opencode-zen -z 'Reply with exactly: personal ok'\""
 printf "%b\n" ""
 printf "%b\n" "  incus exec hermes-haraka -- systemctl is-active hermes-gateway"
 printf "%b\n" "  incus exec hermes-office -- systemctl is-enabled hermes-gateway"
 printf "%b\n" "  incus exec hermes-client -- systemctl is-enabled hermes-gateway"
 printf "%b\n" "  incus exec hermes-personal -- systemctl is-enabled hermes-gateway"
+printf "%b\n" ""
+printf "%b\n" "${YELLOW}Dashboard URL:${RC}"
+printf "%b\n" "  http://127.0.0.1:9119/chat"
+printf "%b\n" ""
+printf "%b\n" "${YELLOW}If chat shows 'gateway exited':${RC}"
+printf "%b\n" "  1. Run dashboard clean restart:"
+printf "%b\n" "     incus exec hermes-haraka -- pkill -9 -f tui_gateway.entry || true"
+printf "%b\n" "     incus exec hermes-haraka -- pkill -9 -f ui-tui || true"
+printf "%b\n" "     incus exec hermes-haraka -- pkill -9 -f 'hermes dashboard' || true"
+printf "%b\n" "     incus exec hermes-haraka -- su - rahul -c \"cd /home/rahul && HERMES_HOME=/opt/data HERMES_DASHBOARD_TUI=1 HERMES_DASHBOARD_TUI_CWD=/home/rahul HERMES_TUI_INLINE=0 nohup hermes dashboard --host 127.0.0.1 --port 9119 --no-open > /opt/data/dashboard.log 2>&1 &\""
+printf "%b\n" "  2. Browser hard refresh with Ctrl+Shift+R."
+printf "%b\n" "  3. If still stale, open in incognito/private window."
 printf "%b\n" "================================================================="
