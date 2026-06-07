@@ -1,0 +1,16 @@
+{
+  "project": "linutil",
+  "scope": "project",
+  "version": "1.0.0",
+  "state": {
+    "stage": "planning",
+    "active_phase": "00-scope-spec-setup",
+    "status": "active"
+  },
+  "last_session": {
+    "timestamp": "2026-06-05THH:mm:ssZ",
+    "agent": "unknown",
+    "machine": "unknown",
+    "status": "success"
+  }
+}
