@@ -134,3 +134,9 @@ task_list = "I SS"
 name = "Claude Code + NVIDIA NIM Setup"
 description = "Install Claude Code and configure free-claude-code proxy for NVIDIA NIM Qwen3 Coder 480B"
 script = "rahul-claude-nvidia-setup.sh"
+
+[[data]]
+name = "Rahul's Kiro IDE Setup"
+description = "Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive, installs to ~/.local, desktop entry + icon"
+script = "rahul-kiro-ide-setup.sh"
+task_list = "I FM"
