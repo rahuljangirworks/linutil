@@ -4,12 +4,19 @@ permissions:
   contents: read
 
 on:
-  pull_request:
-    branches: ["main"]
+  push:
+    branches: ["main", "dev"]
     paths:
       - '**/*.rs'
       - '**/Cargo.toml'
       - 'Cargo.lock'
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - '**/*.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -44,7 +51,7 @@ jobs:
         run: cargo test --no-fail-fast --package linutil_core
 
       - name: Run cargo clippy
-        run: cargo clippy -- -Dwarnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run cargo fmt
         run: cargo fmt --all --check

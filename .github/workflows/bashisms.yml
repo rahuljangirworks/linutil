@@ -7,7 +7,6 @@ on:
   pull_request:
     paths:
       - 'core/tabs/**/*.sh'
-  merge_group:
   workflow_dispatch:
 
 jobs:
@@ -16,7 +15,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - run: git fetch origin ${{ github.base_ref }}
 
       - name: Install devscripts
         run: sudo apt-get update && sudo apt-get install -y devscripts
@@ -32,7 +30,7 @@ jobs:
         id: sh-files
         if: github.event_name != 'pull_request'
         run: |
-          files=$(find . -type f -name "*.sh" | tr '\n' ' ')
+          files=$(find core/tabs -type f -name "*.sh" | tr '\n' ' ')
           echo "files=${files:-none}" >> $GITHUB_ENV
 
       - name: Set FILES for bashism check
@@ -46,5 +44,9 @@ jobs:
 
       - name: Check for bashisms
         run: |
+          if [[ "$FILES" == "none" ]]; then
+            echo "No shell scripts to check."
+            exit 0
+          fi
           IFS=' ' read -r -a file_array <<< "$FILES"
           checkbashisms "${file_array[@]}"

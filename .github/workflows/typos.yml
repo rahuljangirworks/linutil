@@ -4,7 +4,7 @@ permissions:
   contents: read
 
 on:
-  [push, pull_request, workflow_dispatch]
+  workflow_dispatch:
 
 jobs:
   check-typos:
@@ -12,7 +12,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - run: git fetch origin ${{ github.base_ref }}
 
       - name: Run spellcheck
         uses: crate-ci/typos@v1.26.0

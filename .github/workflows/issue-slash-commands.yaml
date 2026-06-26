@@ -6,8 +6,8 @@ on:
 
 jobs:
   issueCommands:
-    # Skip this job if the comment was created/edited on a PR
-    if: ${{ !github.event.issue.pull_request }}
+    # Personal fork: only Rahul can use issue slash commands, and only on issues.
+    if: ${{ github.repository == 'rahuljangirworks/linutil' && !github.event.issue.pull_request }}
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -19,7 +19,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const allowedUsers = ["ChrisTitusTech", "og-mrk", "Marterich", "MyDrift-user", "Real-MullaC", "CodingWonders", "GabiNun2", "FluffyPunk"];
+            const allowedUsers = ["rahuljangirworks"];
             const commenter = context.payload.comment.user.login;
 
             // Authorization check first - before any parsing of comment content

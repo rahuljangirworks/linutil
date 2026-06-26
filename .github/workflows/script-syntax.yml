@@ -1,0 +1,70 @@
+name: Script Syntax Checks
+
+on:
+  push:
+    branches: ["main", "dev"]
+    paths:
+      - '**/*.sh'
+      - 'core/tabs/**/tab_data.toml'
+      - 'core/tabs/tabs.toml'
+  pull_request:
+    branches: ["main", "dev"]
+    paths:
+      - '**/*.sh'
+      - 'core/tabs/**/tab_data.toml'
+      - 'core/tabs/tabs.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell-syntax:
+    name: Shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Parse shell scripts by shebang
+        run: |
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          scripts = sorted(Path("core/tabs").rglob("*.sh"))
+          for path in scripts:
+              first = path.open("r", errors="ignore").readline().strip()
+              shell = "bash" if "bash" in first else "sh"
+              print(f"{shell} -n {path}")
+              subprocess.run([shell, "-n", str(path)], check=True)
+          print(f"Checked {len(scripts)} shell scripts.")
+          PY
+
+  tab-metadata:
+    name: Tab metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Validate tab script paths
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          missing = []
+          for tab_data in sorted(Path("core/tabs").glob("*/tab_data.toml")):
+              base = tab_data.parent
+              with tab_data.open("rb") as handle:
+                  data = tomllib.load(handle)
+              for group in data.get("data", []):
+                  for entry in group.get("entries", []):
+                      script = entry.get("script")
+                      if script and not (base / script).is_file():
+                          missing.append(f"{tab_data}: {script}")
+          if missing:
+              raise SystemExit("Missing scripts:\n" + "\n".join(missing))
+          print("All tab script paths are valid.")
+          PY

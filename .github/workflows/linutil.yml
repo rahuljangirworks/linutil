@@ -1,7 +1,25 @@
-name: LinUtil Release
+name: Rahul Linutil Release
 
 on:
+  push:
+    branches: ["dev"]
+    tags:
+      - "v*"
+      - "latest"
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type to create"
+        required: true
+        default: "pre-release"
+        type: choice
+        options:
+          - "pre-release"
+          - "latest"
+      tag:
+        description: "Stable release tag when release_type is latest, for example v2026.06.26"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -10,8 +28,13 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   linutil_build:
+    if: github.repository == 'rahuljangirworks/linutil'
     runs-on: ubuntu-latest
 
     steps:
@@ -50,22 +73,62 @@ jobs:
           cross build --target-dir=build --release --verbose --target=aarch64-unknown-linux-musl --all-features
           mv ./build/aarch64-unknown-linux-musl/release/linutil ./build/aarch64-unknown-linux-musl/release/linutil-aarch64
 
-      - name: Extract Version
-        id: extract_version
+      - name: Resolve release metadata
+        id: release_meta
+        env:
+          DISPATCH_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
         run: |
-          version=$(date +"%Y.%m.%d")
-          echo "version=$version" >> $GITHUB_ENV
+          date_tag="$(date +"%Y.%m.%d")"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "dev" ]]; then
+            tag="pre-${date_tag}-${GITHUB_RUN_NUMBER}"
+            name="Rahul Linutil Pre-Release ${tag}"
+            prerelease="true"
+            make_latest="false"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+            name="Rahul Linutil ${tag}"
+            prerelease="false"
+            make_latest="true"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_RELEASE_TYPE}" == "latest" ]]; then
+            tag="${DISPATCH_TAG}"
+            if [[ -z "${tag}" ]]; then
+              echo "The tag input is required when release_type is latest." >&2
+              exit 1
+            fi
+            name="Rahul Linutil ${tag}"
+            prerelease="false"
+            make_latest="true"
+          else
+            tag="pre-${date_tag}-${GITHUB_RUN_NUMBER}"
+            name="Rahul Linutil Pre-Release ${tag}"
+            prerelease="true"
+            make_latest="false"
+          fi
+
+          {
+            echo "tag=${tag}"
+            echo "name=${name}"
+            echo "prerelease=${prerelease}"
+            echo "make_latest=${make_latest}"
+          } >> "${GITHUB_OUTPUT}"
         shell: bash
 
       - name: Create and Upload Release
         id: create_release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.version }}
-          name: Pre-Release ${{ env.version }}
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          name: ${{ steps.release_meta.outputs.name }}
           body: |
-            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/ChrisTitusTech/linutil/${{ env.version }}/linutil)
-            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/ChrisTitusTech/linutil/${{ env.version }}/linutil-aarch64)
+            Rahul personal Linutil build.
+
+            Ref: `${{ github.ref_name }}`
+            Commit: `${{ github.sha }}`
+
+            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/${{ github.repository }}/${{ steps.release_meta.outputs.tag }}/linutil)
+            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/${{ github.repository }}/${{ steps.release_meta.outputs.tag }}/linutil-aarch64)
 
           append_body: true
           generate_release_notes: true
@@ -74,7 +137,7 @@ jobs:
             ./build/aarch64-unknown-linux-musl/release/linutil-aarch64
             ./start.sh
             ./startdev.sh
-          prerelease: true
+          prerelease: ${{ steps.release_meta.outputs.prerelease }}
+          make_latest: ${{ steps.release_meta.outputs.make_latest }}
         env:
-          version: ${{ env.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
