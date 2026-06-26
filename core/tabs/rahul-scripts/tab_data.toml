@@ -1,0 +1,184 @@
+name = "Rahul's Scripts"
+
+[[data]]
+name = "Desktop"
+
+[[data.entries]]
+name = "Rahul's DWM Setup"
+description = "Install/update dwm-rahul, including Nord backgrounds and terminal configs"
+script = "desktop/dwm-rahul-setup.sh"
+task_list = "I MP FM SS"
+
+[[data]]
+name = "Terminals"
+
+[[data.entries]]
+name = "Rahul's Alacritty Setup"
+description = "Install Alacritty with Rahul's Nordic theme config from dwm-rahul"
+script = "terminals/rahul-alacritty-setup.sh"
+task_list = "I MP FM"
+
+[[data.entries]]
+name = "Rahul's Ghostty Setup"
+description = "Install Ghostty with Rahul's config from dwm-rahul"
+script = "terminals/rahul-ghostty-setup.sh"
+task_list = "I MP FM"
+
+[[data.entries]]
+name = "Rahul's Kitty Setup"
+description = "Install Kitty with Rahul's Nord theme config from dwm-rahul"
+script = "terminals/rahul-kitty-setup.sh"
+task_list = "I MP FM"
+
+[[data]]
+name = "Shell"
+
+[[data.entries]]
+name = "Rahul's MyBash Setup"
+description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
+script = "shell/rahul-mybash-setup.sh"
+task_list = "I MP FM"
+
+[[data.entries]]
+name = "Rahul's Flameshot Setup"
+description = "Install and configure Flameshot with Rahul's warm bronze/beige theme and DWM keybindings"
+script = "shell/rahul-flameshot-setup.sh"
+
+[[data]]
+name = "Utility"
+
+[[data.entries]]
+name = "Blueman Bluetooth"
+description = "Install Blueman and start blueman-applet silently in the tray after login (rerunnable)"
+script = "utility/rahul-blueman-setup.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Libinput Gestures"
+description = "Install libinput-gestures (touchpad multi-finger gestures), add user to input group, autostart after login (rerunnable)"
+script = "utility/rahul-libinput-gestures-setup.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Caffeine-ng"
+description = "Install caffeine-ng (prevent screen lock/sleep on demand), start silently in tray after login (rerunnable)"
+script = "utility/rahul-caffeine-ng-setup.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Handy Speech-to-Text"
+description = "Install Handy (handy.computer) — open-source offline speech-to-text, auto-starts silently after login (rerunnable)"
+script = "utility/handy-setup.sh"
+task_list = "I SS"
+
+[[data]]
+name = "IDEs"
+
+[[data.entries]]
+name = "Rahul's Antigravity IDE Reinstall"
+description = "Clean reinstall Antigravity IDE from scratch — removes all user data, downloads fresh copy, sets up desktop entry with icon"
+script = "ide/rahul-antigravity-reinstall.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Rahul's Cursor Desktop Setup"
+description = "Install Cursor Desktop v3.5 from official golden .deb (AI code editor, desktop entry, /usr/bin/cursor)"
+script = "ide/rahul-cursor-desktop-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Rahul's Kiro IDE Setup"
+description = "Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive, installs to ~/.local, desktop entry + icon"
+script = "ide/rahul-kiro-ide-setup.sh"
+task_list = "I FM"
+
+[[data]]
+name = "AI & Agents"
+
+[[data.entries]]
+name = "Rahul's OpenCode Setup"
+description = "Install OpenCode CLI + Desktop AppImage with fast RahulOS launcher and rofi icon"
+script = "ai/rahul-opencode-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Rahul's AionUi Setup"
+description = "Install AionUi v1.9.25 — AI Cowork app for OpenCode, Claude Code, Gemini CLI, Qwen & 20+ more CLI agents"
+script = "ai/rahul-aionui-setup.sh"
+task_list = "I"
+
+[[data.entries]]
+name = "Rahul's Gemma 4 + Ollama Setup"
+description = "Install Ollama + Gemma 4 AI model (auto-detects GPU/RAM, works on any Linux distro)"
+script = "ai/rahul-gemma4-ollama-setup.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Claude Code + NVIDIA NIM Setup"
+description = "Install Claude Code and configure free-claude-code proxy for NVIDIA NIM Qwen3 Coder 480B"
+script = "ai/rahul-claude-nvidia-setup.sh"
+
+[[data]]
+name = "Dev Tools"
+
+[[data.entries]]
+name = "GitHub SSH Key Gen & Connect"
+description = "Auto-generates GitHub SSH keys, installs clipboard deps, and verifies connection"
+script = "dev-tools/rahul-github-ssh-setup.sh"
+
+[[data.entries]]
+name = "Rahul's GitHub Desktop Plus"
+description = "Install GitHub Desktop Plus (v3.5.9) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
+script = "dev-tools/rahul-github-desktop-plus.sh"
+task_list = "I"
+
+[[data]]
+name = "Infrastructure"
+
+[[data.entries]]
+name = "Rahul's Linutil Installer"
+description = "Install Linutil using the same flow as the upstream applications setup tab"
+script = "infrastructure/rahul-linutil-installer.sh"
+task_list = "I MP FM"
+
+[[data.entries.preconditions]]
+matches = false
+data = "command_exists"
+values = ["linutil"]
+
+[[data.entries]]
+name = "Rahul's Linutil Updater"
+description = "Update a Linutil installation made through cargo"
+script = "infrastructure/rahul-linutil-updater.sh"
+task_list = "I MP FM"
+
+[[data.entries.preconditions]]
+matches = true
+data = "command_exists"
+values = ["linutil"]
+
+[[data.entries]]
+name = "Rahul's Architecture Setup"
+description = "Sets up RahulOS: vault (~/.work/), workspace (~/work/), agent symlinks, and directory structure"
+script = "infrastructure/rahul-architecture-setup.sh"
+
+[[data]]
+name = "Remote"
+
+[[data.entries]]
+name = "RustDesk Remote Desktop"
+description = "Install RustDesk remote desktop — auto-starts silently after login (rerunnable)"
+script = "remote/rustdesk-setup.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "SSH Setup & Hardening"
+description = "Install and secure SSH: custom port, strong crypto, Keys, drop-in config, post-quantum KEX (rerunnable)"
+script = "remote/secure-ssh.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Tailscale VPN Setup"
+description = "Install and configure Tailscale VPN with custom hostname"
+script = "remote/tailscale-setup.sh"
+task_list = "I SS"

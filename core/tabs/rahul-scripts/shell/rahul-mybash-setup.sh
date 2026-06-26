@@ -1,0 +1,222 @@
+#!/bin/sh
+
+# Description: Setup Rahul's customized mybash configuration with theme selection
+# Repository: https://github.com/rahuljangirworks/mybash
+
+. ../../common-script.sh
+
+gitpath="$HOME/.local/share/mybash"
+SCRIPT_DIR="$(dirname "$0")"
+THEMES_DIR="$SCRIPT_DIR/themes"
+
+ensureBashrcLocal() {
+    bashrc_local="$HOME/.bashrc.local"
+
+    if [ -L "$bashrc_local" ] && [ ! -e "$bashrc_local" ]; then
+        printf "%b\n" "${YELLOW}Replacing broken ~/.bashrc.local symlink${RC}"
+        rm -f "$bashrc_local"
+    fi
+
+    if [ ! -e "$bashrc_local" ]; then
+        {
+            printf "%s\n" "#!/usr/bin/env bash"
+            printf "%s\n" "# Rahul's Personal Bash Customizations"
+        } > "$bashrc_local"
+    fi
+}
+
+installDepend() {
+    if [ ! -f "/usr/share/bash-completion/bash_completion" ] || ! command_exists bash tar bat tree unzip fc-list git; then
+        printf "%b\n" "${YELLOW}Installing dependencies...${RC}"
+        case "$PACKAGER" in
+            pacman)
+                "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm bash bash-completion tar bat tree unzip fontconfig git fzf fastfetch
+                ;;
+            apk)
+                "$ESCALATION_TOOL" "$PACKAGER" add bash bash-completion tar bat tree unzip fontconfig git fzf fastfetch
+                ;;
+            xbps-install)
+                "$ESCALATION_TOOL" "$PACKAGER" -Sy bash bash-completion tar bat tree unzip fontconfig git fzf fastfetch
+                ;;
+            *)
+                "$ESCALATION_TOOL" "$PACKAGER" install -y bash bash-completion tar bat tree unzip fontconfig git fzf fastfetch
+                ;;
+        esac
+    fi
+}
+
+cloneMyBash() {
+    if [ -d "$gitpath" ]; then
+        printf "%b\n" "${YELLOW}Removing old mybash installation...${RC}"
+        rm -rf "$gitpath"
+    fi
+    mkdir -p "$HOME/.local/share"
+    printf "%b\n" "${CYAN}Cloning Rahul's mybash fork...${RC}"
+    cd "$HOME" && git clone https://github.com/rahuljangirworks/mybash.git "$gitpath"
+}
+
+installFont() {
+    FONT_NAME="MesloLGS Nerd Font Mono"
+    if fc-list :family | grep -iq "$FONT_NAME"; then
+        printf "%b\n" "${GREEN}Font '$FONT_NAME' is already installed.${RC}"
+    else
+        printf "%b\n" "${YELLOW}Installing font '$FONT_NAME'${RC}"
+        FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Meslo.zip"
+        FONT_DIR="$HOME/.local/share/fonts"
+        TEMP_DIR=$(mktemp -d)
+        curl -sSLo "$TEMP_DIR"/"${FONT_NAME}".zip "$FONT_URL"
+        unzip "$TEMP_DIR"/"${FONT_NAME}".zip -d "$TEMP_DIR"
+        mkdir -p "$FONT_DIR"/"$FONT_NAME"
+        mv "${TEMP_DIR}"/*.ttf "$FONT_DIR"/"$FONT_NAME"
+        fc-cache -fv
+        rm -rf "${TEMP_DIR}"
+        printf "%b\n" "${GREEN}'$FONT_NAME' installed successfully.${RC}"
+    fi
+}
+
+installStarshipAndFzf() {
+    if command_exists starship; then
+        printf "%b\n" "${GREEN}Starship already installed${RC}"
+    else
+        printf "%b\n" "${YELLOW}Installing Starship prompt...${RC}"
+        if [ "$PACKAGER" = "eopkg" ]; then
+            "$ESCALATION_TOOL" "$PACKAGER" install -y starship || {
+                printf "%b\n" "${RED}Failed to install starship with Solus!${RC}"
+                exit 1
+            }
+        else
+            curl -sSL https://starship.rs/install.sh | "$ESCALATION_TOOL" sh || {
+                printf "%b\n" "${RED}Failed to install starship!${RC}"
+                exit 1
+            }
+        fi
+    fi
+
+    if command_exists fzf; then
+        printf "%b\n" "${GREEN}Fzf already installed${RC}"
+    else
+        if [ -d "$HOME/.fzf" ]; then
+            printf "%b\n" "${YELLOW}fzf directory already exists. Updating...${RC}"
+            cd "$HOME/.fzf" && git pull
+        else
+            printf "%b\n" "${YELLOW}Installing fzf...${RC}"
+            git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+        fi
+        "$ESCALATION_TOOL" ~/.fzf/install
+    fi
+}
+
+installZoxide() {
+    if command_exists zoxide; then
+        printf "%b\n" "${GREEN}Zoxide already installed${RC}"
+        return
+    fi
+
+    printf "%b\n" "${YELLOW}Installing Zoxide...${RC}"
+    if ! curl -sSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh; then
+        printf "%b\n" "${RED}Something went wrong during zoxide install!${RC}"
+        exit 1
+    fi
+}
+
+selectTheme() {
+    printf "%b\n" ""
+    printf "%b\n" "${CYAN}╔══════════════════════════════════════════════╗${RC}"
+    printf "%b\n" "${CYAN}║       Select Theme (Starship + Fastfetch)    ║${RC}"
+    printf "%b\n" "${CYAN}╠══════════════════════════════════════════════╣${RC}"
+    printf "%b\n" "${CYAN}║${RC}  ${YELLOW}1)${RC} Rahul   — Warm bronze/copper  ${GREEN}██████${RC}  ${CYAN}║${RC}"
+    printf "%b\n" "${CYAN}║${RC}  ${YELLOW}2)${RC} Work    — Cool blue/teal      ${BLUE}██████${RC}  ${CYAN}║${RC}"
+    printf "%b\n" "${CYAN}║${RC}  ${YELLOW}3)${RC} Server  — Green/emerald       ${GREEN}██████${RC}  ${CYAN}║${RC}"
+    printf "%b\n" "${CYAN}║${RC}  ${YELLOW}4)${RC} Test    — Red/coral/warning   ${RED}██████${RC}  ${CYAN}║${RC}"
+    printf "%b\n" "${CYAN}╚══════════════════════════════════════════════╝${RC}"
+    printf "%b\n" ""
+
+    THEME_CHOICE=""
+    while [ -z "$THEME_CHOICE" ]; do
+        printf "${YELLOW}Enter theme number [1-4]: ${RC}"
+        read -r choice
+        case "$choice" in
+            1) THEME_CHOICE="rahul" ;;
+            2) THEME_CHOICE="work" ;;
+            3) THEME_CHOICE="server" ;;
+            4) THEME_CHOICE="test" ;;
+            *) printf "%b\n" "${RED}Invalid choice. Enter 1-4.${RC}" ;;
+        esac
+    done
+
+    printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
+}
+
+applyTheme() {
+    THEME_FILE="$THEMES_DIR/${THEME_CHOICE}.toml"
+
+    if [ ! -f "$THEME_FILE" ]; then
+        printf "%b\n" "${RED}Theme file not found: $THEME_FILE${RC}"
+        printf "%b\n" "${YELLOW}Falling back to rahul theme...${RC}"
+        THEME_FILE="$THEMES_DIR/rahul.toml"
+        THEME_CHOICE="rahul"
+    fi
+
+    mkdir -p "$HOME/.config"
+    cp "$THEME_FILE" "$HOME/.config/starship.toml"
+    printf "%b\n" "${GREEN}Theme '$THEME_CHOICE' applied to ~/.config/starship.toml${RC}"
+
+    # Apply matching fastfetch config
+    FASTFETCH_THEME="$THEMES_DIR/${THEME_CHOICE}.jsonc"
+    if [ -f "$FASTFETCH_THEME" ]; then
+        mkdir -p "$HOME/.config/fastfetch"
+        cp "$FASTFETCH_THEME" "$HOME/.config/fastfetch/config.jsonc"
+        printf "%b\n" "${GREEN}Fastfetch theme '$THEME_CHOICE' applied to ~/.config/fastfetch/config.jsonc${RC}"
+    fi
+
+    BASHRC_LOCAL="$HOME/.bashrc.local"
+    ensureBashrcLocal
+    sed -i '/^export LINUTIL_THEME=/d' "$BASHRC_LOCAL" 2>/dev/null || true
+    printf "export LINUTIL_THEME=\"%s\"\n" "$THEME_CHOICE" >> "$BASHRC_LOCAL" 2>/dev/null
+    if [ $? -eq 0 ]; then
+        printf "%b\n" "${GREEN}Theme saved to ~/.bashrc.local${RC}"
+    else
+        printf "%b\n" "${YELLOW}Theme applied but could not save to ~/.bashrc.local (non-critical)${RC}"
+    fi
+}
+
+linkConfig() {
+    OLD_BASHRC="$HOME/.bashrc"
+    if [ -e "$OLD_BASHRC" ] && [ ! -e "$HOME/.bashrc.bak" ]; then
+        printf "%b\n" "${YELLOW}Backing up old .bashrc to $HOME/.bashrc.bak${RC}"
+        if ! mv "$OLD_BASHRC" "$HOME/.bashrc.bak"; then
+            printf "%b\n" "${RED}Can't move the old bash config file!${RC}"
+            exit 1
+        fi
+    fi
+
+    printf "%b\n" "${YELLOW}Linking Rahul's bash config...${RC}"
+    ln -svf "$gitpath/.bashrc" "$HOME/.bashrc" || {
+        printf "%b\n" "${RED}Failed to create symbolic link for .bashrc${RC}"
+        exit 1
+    }
+
+    # Link .bashrc.local if it exists (for machine-specific configs)
+    if [ -f "$gitpath/.bashrc.local" ]; then
+        printf "%b\n" "${YELLOW}Copying .bashrc.local template...${RC}"
+        if [ ! -e "$HOME/.bashrc.local" ]; then
+            cp "$gitpath/.bashrc.local" "$HOME/.bashrc.local"
+        fi
+    fi
+
+    printf "%b\n" "${GREEN}Done! Restart your shell to see the changes.${RC}"
+    printf "%b\n" "${CYAN}Your mybash is installed at: $gitpath${RC}"
+    printf "%b\n" "${CYAN}Theme: $THEME_CHOICE | Starship: ~/.config/starship.toml | Fastfetch: ~/.config/fastfetch/config.jsonc${RC}"
+}
+
+# Main execution
+checkEnv
+checkEscalationTool
+installDepend
+cloneMyBash
+installFont
+installStarshipAndFzf
+installZoxide
+selectTheme
+applyTheme
+linkConfig

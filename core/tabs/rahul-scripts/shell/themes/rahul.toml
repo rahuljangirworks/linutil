@@ -1,0 +1,119 @@
+format = """
+[](#3B4252)\
+$python\
+$username\
+[](bg:#434C5E fg:#3B4252)\
+$directory\
+[](fg:#434C5E bg:#9A7B5B)\
+$git_branch\
+$git_status\
+[](fg:#9A7B5B bg:#B87333)\
+$c\
+$elixir\
+$elm\
+$golang\
+$haskell\
+$java\
+$julia\
+$nodejs\
+$nim\
+$rust\
+[](fg:#B87333 bg:#C9A66B)\
+$docker_context\
+[](fg:#C9A66B bg:#6B4E4E)\
+$time\
+[ ](fg:#6B4E4E)\
+"""
+command_timeout = 5000
+
+[username]
+show_always = true
+style_user = "bg:#3B4252"
+style_root = "bg:#3B4252"
+format = '[$user ]($style)'
+
+[directory]
+style = "bg:#434C5E"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = ""
+"Music" = ""
+"Pictures" = ""
+
+[c]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[elixir]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[elm]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[golang]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[haskell]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[java]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[julia]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[nodejs]
+symbol = ""
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[nim]
+symbol = " "
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[rust]
+symbol = ""
+style = "bg:#B87333"
+format = '[ $symbol ($version) ]($style)'
+
+[git_branch]
+symbol = ""
+style = "bg:#9A7B5B"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bg:#9A7B5B"
+format = '[$all_status$ahead_behind ]($style)'
+
+[docker_context]
+symbol = " "
+style = "bg:#C9A66B"
+format = '[ $symbol $context ]($style)$path'
+
+[python]
+style = "bg:#3B4252"
+format = '[(\($virtualenv\) )]($style)'
+
+[time]
+disabled = false
+time_format = "%R"
+style = "bg:#6B4E4E"
+format = '[ $time ]($style)'

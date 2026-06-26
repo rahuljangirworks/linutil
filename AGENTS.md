@@ -9,6 +9,20 @@ executes selected commands inside a pseudo-terminal.
 
 Read `SPEC.md` before making architectural or behavior changes.
 
+## RahulOS Vault Bridge
+
+This workspace is paired with the RahulOS vault project at
+`/home/rahul/.work/04-personal-projacts/linutil/`. The local `.agent`
+symlink points to that vault agent folder when present. For Rahul-specific
+fork policy, project state, and handoff notes, read `.agent/AGENTS.md`,
+`.agent/plan/PHASES.md`, `.agent/rules/04-upstream-sync.md`, and
+`.agent/memory/MEMORY.md` before initialization, upstream sync, or
+Rahul-specific script work. During upstream conflict resolution, upstream owns
+the Rust/core base and generic tabs by default; preserve Rahul custom scripts
+and assets only under `core/tabs/rahul-scripts/**`, plus the protected
+`rahul-scripts` registration in `core/tabs/tabs.toml` and the protected Rahul
+logo asset at `tui/assets/ctt_logo.png`.
+
 ## Repository layout
 
 - `core/`: Backend library, menu data model, TOML parsing, platform

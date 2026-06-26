@@ -1,4 +1,5 @@
 directories = [
+    "rahul-scripts",
     "applications-setup",
     "gaming",
     "security",
