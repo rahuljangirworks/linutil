@@ -3,7 +3,9 @@
 # Description: Install/update dwm-rahul through the fork's own installer.
 # Repository: https://github.com/rahuljangirworks/dwm-rahul
 
-. ../../common-script.sh
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+. "$SCRIPT_DIR/../../common-script.sh"
 
 DWM_REPO_URL="https://github.com/rahuljangirworks/dwm-rahul.git"
 DWM_REPO_SSH_URL="git@github.com:rahuljangirworks/dwm-rahul.git"
