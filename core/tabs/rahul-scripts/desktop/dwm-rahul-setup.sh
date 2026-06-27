@@ -47,9 +47,8 @@ ensureDwmRepo() {
     [ ! -d "$parent_dir" ] && mkdir -p "$parent_dir"
 
     if [ -d "$DWM_DIR" ] && [ ! -d "$DWM_DIR/.git" ]; then
-        printf "%b\n" "${RED}$DWM_DIR exists but is not a git repository.${RC}"
-        printf "%b\n" "${YELLOW}Move it aside or set DWM_RAHUL_DIR to another path.${RC}"
-        return 1
+        printf "%b\n" "${YELLOW}$DWM_DIR exists but is not a git repository. Backing up and removing to clone fresh...${RC}"
+        mv "$DWM_DIR" "${DWM_DIR}_backup_$(date +%s)" 2>/dev/null || rm -rf "$DWM_DIR"
     fi
 
     if [ ! -d "$DWM_DIR/.git" ]; then
