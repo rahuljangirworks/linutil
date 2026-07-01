@@ -71,6 +71,12 @@ description = "Install Handy (handy.computer) — open-source offline speech-to-
 script = "utility/handy-setup.sh"
 task_list = "I SS"
 
+[[data.entries]]
+name = "Input Leap / Barrier"
+description = "Install keyboard and mouse sharing, then choose server or client setup"
+script = "utility/input-share-setup.sh"
+task_list = "I SS"
+
 [[data]]
 name = "IDEs"
 
