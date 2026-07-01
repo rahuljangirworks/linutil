@@ -102,27 +102,10 @@ task_list = "I FM"
 name = "AI & Agents"
 
 [[data.entries]]
-name = "Rahul's OpenCode Setup"
-description = "Install OpenCode CLI + Desktop AppImage with fast RahulOS launcher and rofi icon"
-script = "ai/rahul-opencode-setup.sh"
-task_list = "I FM"
-
-[[data.entries]]
-name = "Rahul's AionUi Setup"
-description = "Install AionUi v1.9.25 — AI Cowork app for OpenCode, Claude Code, Gemini CLI, Qwen & 20+ more CLI agents"
-script = "ai/rahul-aionui-setup.sh"
-task_list = "I"
-
-[[data.entries]]
-name = "Rahul's Gemma 4 + Ollama Setup"
-description = "Install Ollama + Gemma 4 AI model (auto-detects GPU/RAM, works on any Linux distro)"
-script = "ai/rahul-gemma4-ollama-setup.sh"
-task_list = "I SS"
-
-[[data.entries]]
-name = "Claude Code + NVIDIA NIM Setup"
-description = "Install Claude Code and configure free-claude-code proxy for NVIDIA NIM Qwen3 Coder 480B"
-script = "ai/rahul-claude-nvidia-setup.sh"
+name = "RahulOS Herdr AI Runtime"
+description = "Install/update Herdr, Gemini CLI, Antigravity CLI, optional AionUi, Herdr integrations, skill, and .work launcher"
+script = "ai/rahul-herdr-ai-runtime-setup.sh"
+task_list = "I FM SS"
 
 [[data]]
 name = "Dev Tools"
