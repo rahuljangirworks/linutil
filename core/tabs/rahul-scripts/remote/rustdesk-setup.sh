@@ -18,15 +18,18 @@ installRustDesk() {
 
     case "$PACKAGER" in
         pacman)
-            # Official repos first, then AUR helpers, then Flatpak
-            if "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm rustdesk 2>/dev/null; then
+            # Prefer prebuilt packages. The AUR `rustdesk` package builds from
+            # source and can take a very long time on older machines.
+            if "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm rustdesk-bin 2>/dev/null; then
+                printf "%b\n" "${GREEN}✓ RustDesk installed from binary package${RC}"
+            elif "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm rustdesk 2>/dev/null; then
                 printf "%b\n" "${GREEN}✓ RustDesk installed from official repos${RC}"
             elif command -v yay > /dev/null 2>&1; then
-                yay -S --needed --noconfirm rustdesk
-                printf "%b\n" "${GREEN}✓ RustDesk installed from AUR (yay)${RC}"
+                yay -S --needed --noconfirm rustdesk-bin
+                printf "%b\n" "${GREEN}✓ RustDesk installed from AUR binary package (yay)${RC}"
             elif command -v paru > /dev/null 2>&1; then
-                paru -S --needed --noconfirm rustdesk
-                printf "%b\n" "${GREEN}✓ RustDesk installed from AUR (paru)${RC}"
+                paru -S --needed --noconfirm rustdesk-bin
+                printf "%b\n" "${GREEN}✓ RustDesk installed from AUR binary package (paru)${RC}"
             else
                 installFlatpak
             fi
