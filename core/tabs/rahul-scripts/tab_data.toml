@@ -98,6 +98,12 @@ description = "Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive
 script = "ide/rahul-kiro-ide-setup.sh"
 task_list = "I FM"
 
+[[data.entries]]
+name = "Rahul's Codex Desktop Setup"
+description = "Install/update OpenAI Codex Desktop (AppImage) — downloads latest release, installs FUSE, icon, desktop entry + ~/.local/bin launcher (rerunnable)"
+script = "ide/rahul-codex-desktop-setup.sh"
+task_list = "I FM"
+
 [[data]]
 name = "AI & Agents"
 
