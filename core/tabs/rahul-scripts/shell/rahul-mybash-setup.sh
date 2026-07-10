@@ -1,13 +1,21 @@
 #!/bin/sh
 
 # Description: Setup Rahul's customized mybash configuration with theme selection
+case "$0" in
+    */*) script_path="$0" ;;
+    *) script_path="$(command -v -- "$0" 2>/dev/null || printf "%s\n" "$0")" ;;
+esac
+SCRIPT_DIR="$(dirname "$script_path")"
+SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+unset script_path
+
 # Repository: https://github.com/rahuljangirworks/mybash
 
-. ../../common-script.sh
+. "$SCRIPT_DIR/../../common-script.sh"
 
 gitpath="$HOME/.local/share/mybash"
-SCRIPT_DIR="$(dirname "$0")"
 THEMES_DIR="$SCRIPT_DIR/themes"
+MYBASH_THEMES_DIR="$gitpath/themes"
 
 ensureBashrcLocal() {
     bashrc_local="$HOME/.bashrc.local"
@@ -23,6 +31,61 @@ ensureBashrcLocal() {
             printf "%s\n" "# Rahul's Personal Bash Customizations"
         } > "$bashrc_local"
     fi
+}
+
+getThemeFile() {
+    theme_name="$1"
+    theme_ext="$2"
+    if [ -f "$MYBASH_THEMES_DIR/${theme_name}.${theme_ext}" ]; then
+        printf "%s\n" "$MYBASH_THEMES_DIR/${theme_name}.${theme_ext}"
+    else
+        printf "%s\n" "$THEMES_DIR/${theme_name}.${theme_ext}"
+    fi
+}
+
+normalizeThemeChoice() {
+    case "$1" in
+        1|rahul) printf "%s\n" "rahul" ;;
+        2|work) printf "%s\n" "work" ;;
+        3|server) printf "%s\n" "server" ;;
+        4|test) printf "%s\n" "test" ;;
+        *) return 1 ;;
+    esac
+}
+
+detectThemeMode() {
+    dwm_themes="${XDG_CONFIG_HOME:-$HOME/.config}/dwm-titus/themes.toml"
+    if [ -f "$dwm_themes" ]; then
+        active_theme=$(awk '
+            /^\[active\]/ { active = 1; next }
+            /^\[/ { active = 0 }
+            active && $1 == "theme" {
+                sub(/^[^=]*=[[:space:]]*/, "")
+                gsub(/"/, "")
+                sub(/[[:space:]]+#.*$/, "")
+                sub(/[[:space:]]+$/, "")
+                print
+                exit
+            }
+        ' "$dwm_themes")
+        if [ -n "$active_theme" ]; then
+            dark_mode=$(awk -v section="[theme.$active_theme]" '
+                /^\[/ { in_section = ($0 == section); next }
+                in_section && $1 == "dark_mode" {
+                    sub(/^[^=]*=[[:space:]]*/, "")
+                    sub(/[[:space:]]+#.*$/, "")
+                    sub(/[[:space:]]+$/, "")
+                    print
+                    exit
+                }
+            ' "$dwm_themes")
+            if [ "$dark_mode" = "false" ]; then
+                printf "%s\n" "light"
+                return
+            fi
+        fi
+    fi
+    printf "%s\n" "dark"
 }
 
 installDepend() {
@@ -120,6 +183,27 @@ installZoxide() {
 }
 
 selectTheme() {
+    requested_theme="${MYBASH_THEME:-${LINUTIL_THEME:-}}"
+    if [ -z "$requested_theme" ] && [ -r "$HOME/.config/mybash/theme.env" ]; then
+        requested_theme=$(awk -F= '
+            $1 == "export MYBASH_THEME" || $1 == "export LINUTIL_THEME" {
+                gsub(/"/, "", $2)
+                print $2
+                exit
+            }
+        ' "$HOME/.config/mybash/theme.env" 2>/dev/null)
+    fi
+    if [ -z "$requested_theme" ] && [ ! -t 0 ]; then
+        requested_theme="rahul"
+    fi
+    if [ -n "$requested_theme" ]; then
+        if THEME_CHOICE="$(normalizeThemeChoice "$requested_theme")"; then
+            printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
+            return
+        fi
+        printf "%b\n" "${YELLOW}Ignoring unknown theme '$requested_theme'; asking manually.${RC}"
+    fi
+
     printf "%b\n" ""
     printf "%b\n" "${CYAN}╔══════════════════════════════════════════════╗${RC}"
     printf "%b\n" "${CYAN}║       Select Theme (Starship + Fastfetch)    ║${RC}"
@@ -135,26 +219,29 @@ selectTheme() {
     while [ -z "$THEME_CHOICE" ]; do
         printf "${YELLOW}Enter theme number [1-4]: ${RC}"
         read -r choice
-        case "$choice" in
-            1) THEME_CHOICE="rahul" ;;
-            2) THEME_CHOICE="work" ;;
-            3) THEME_CHOICE="server" ;;
-            4) THEME_CHOICE="test" ;;
-            *) printf "%b\n" "${RED}Invalid choice. Enter 1-4.${RC}" ;;
-        esac
+        if THEME_CHOICE="$(normalizeThemeChoice "$choice")"; then
+            :
+        else
+            THEME_CHOICE=""
+            printf "%b\n" "${RED}Invalid choice. Enter 1-4.${RC}"
+        fi
     done
 
     printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
 }
 
 applyTheme() {
-    THEME_FILE="$THEMES_DIR/${THEME_CHOICE}.toml"
+    THEME_FILE="$(getThemeFile "$THEME_CHOICE" toml)"
 
     if [ ! -f "$THEME_FILE" ]; then
         printf "%b\n" "${RED}Theme file not found: $THEME_FILE${RC}"
         printf "%b\n" "${YELLOW}Falling back to rahul theme...${RC}"
-        THEME_FILE="$THEMES_DIR/rahul.toml"
         THEME_CHOICE="rahul"
+        THEME_FILE="$(getThemeFile "$THEME_CHOICE" toml)"
+    fi
+    if [ ! -f "$THEME_FILE" ]; then
+        printf "%b\n" "${RED}No usable Starship theme found for '$THEME_CHOICE'.${RC}"
+        exit 1
     fi
 
     mkdir -p "$HOME/.config"
@@ -162,17 +249,31 @@ applyTheme() {
     printf "%b\n" "${GREEN}Theme '$THEME_CHOICE' applied to ~/.config/starship.toml${RC}"
 
     # Apply matching fastfetch config
-    FASTFETCH_THEME="$THEMES_DIR/${THEME_CHOICE}.jsonc"
+    FASTFETCH_THEME="$(getThemeFile "$THEME_CHOICE" jsonc)"
     if [ -f "$FASTFETCH_THEME" ]; then
         mkdir -p "$HOME/.config/fastfetch"
         cp "$FASTFETCH_THEME" "$HOME/.config/fastfetch/config.jsonc"
         printf "%b\n" "${GREEN}Fastfetch theme '$THEME_CHOICE' applied to ~/.config/fastfetch/config.jsonc${RC}"
     fi
 
+    THEME_MODE="$(detectThemeMode)"
+    mkdir -p "$HOME/.config/mybash"
+    {
+        printf "%s\n" "# Auto-generated by rahul-mybash-setup.sh - do not edit manually."
+        printf "export MYBASH_THEME=\"%s\"\n" "$THEME_CHOICE"
+        printf "export LINUTIL_THEME=\"%s\"\n" "$THEME_CHOICE"
+        printf "export MYBASH_THEME_MODE=\"%s\"\n" "$THEME_MODE"
+        printf "export LINUTIL_THEME_MODE=\"%s\"\n" "$THEME_MODE"
+    } > "$HOME/.config/mybash/theme.env"
+    printf "%b\n" "${GREEN}Theme environment saved to ~/.config/mybash/theme.env${RC}"
+
     BASHRC_LOCAL="$HOME/.bashrc.local"
     ensureBashrcLocal
-    sed -i '/^export LINUTIL_THEME=/d' "$BASHRC_LOCAL" 2>/dev/null || true
+    sed -i '/^export LINUTIL_THEME=/d;/^export MYBASH_THEME=/d;/^export LINUTIL_THEME_MODE=/d;/^export MYBASH_THEME_MODE=/d' "$BASHRC_LOCAL" 2>/dev/null || true
     printf "export LINUTIL_THEME=\"%s\"\n" "$THEME_CHOICE" >> "$BASHRC_LOCAL" 2>/dev/null
+    printf "export MYBASH_THEME=\"%s\"\n" "$THEME_CHOICE" >> "$BASHRC_LOCAL" 2>/dev/null
+    printf "export LINUTIL_THEME_MODE=\"%s\"\n" "$THEME_MODE" >> "$BASHRC_LOCAL" 2>/dev/null
+    printf "export MYBASH_THEME_MODE=\"%s\"\n" "$THEME_MODE" >> "$BASHRC_LOCAL" 2>/dev/null
     if [ $? -eq 0 ]; then
         printf "%b\n" "${GREEN}Theme saved to ~/.bashrc.local${RC}"
     else
