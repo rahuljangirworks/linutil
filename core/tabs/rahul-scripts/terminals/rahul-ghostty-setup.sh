@@ -18,6 +18,11 @@ installGhostty() {
             xbps-install)
                 "$ESCALATION_TOOL" "$PACKAGER" -Sy ghostty
                 ;;
+            dnf)
+                printf "%b\n" "${CYAN}Enabling scottames/ghostty COPR repository for Fedora...${RC}"
+                "$ESCALATION_TOOL" dnf copr enable -y scottames/ghostty
+                "$ESCALATION_TOOL" dnf install -y ghostty
+                ;;
             *)
                 "$ESCALATION_TOOL" "$PACKAGER" install -y ghostty
                 ;;
