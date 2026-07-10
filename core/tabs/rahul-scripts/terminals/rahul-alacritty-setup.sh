@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 # Description: Setup Rahul's customized Alacritty configuration
-# Repository: https://github.com/rahuljangirworks/dwm-rahul
+# Repository: https://github.com/rahuljangirworks/dwm-jangir
 
 . ../../common-script.sh
 
@@ -43,14 +43,14 @@ setupAlacrittyConfig() {
     rm -f "${HOME}/.config/alacritty/keybinds.toml"
     rm -f "${HOME}/.config/alacritty/nordic.toml"
 
-    # Download config files from Rahul's dwm-rahul repo (avoids merge conflicts with upstream)
-    printf "%b\n" "${CYAN}Downloading config from rahuljangirworks/dwm-rahul...${RC}"
-    curl -sSLo "${HOME}/.config/alacritty/alacritty.toml" \
-        "https://raw.githubusercontent.com/rahuljangirworks/dwm-rahul/main/config/alacritty/alacritty.toml"
-    curl -sSLo "${HOME}/.config/alacritty/keybinds.toml" \
-        "https://raw.githubusercontent.com/rahuljangirworks/dwm-rahul/main/config/alacritty/keybinds.toml"
-    curl -sSLo "${HOME}/.config/alacritty/nordic.toml" \
-        "https://raw.githubusercontent.com/rahuljangirworks/dwm-rahul/main/config/alacritty/nordic.toml"
+    # Download config files from Rahul's dwm-jangir repo (avoids merge conflicts with upstream)
+    printf "%b\n" "${CYAN}Downloading config from rahuljangirworks/dwm-jangir...${RC}"
+    curl -fsSL -o "$HOME/.config/alacritty/alacritty.toml" \
+        "https://raw.githubusercontent.com/rahuljangirworks/dwm-jangir/dev/config/alacritty/alacritty.toml"
+    curl -fsSL -o "$HOME/.config/alacritty/keybinds.toml" \
+        "https://raw.githubusercontent.com/rahuljangirworks/dwm-jangir/dev/config/alacritty/keybinds.toml"
+    curl -fsSL -o "$HOME/.config/alacritty/nordic.toml" \
+        "https://raw.githubusercontent.com/rahuljangirworks/dwm-jangir/dev/config/alacritty/nordic.toml"
 
     printf "%b\n" "${GREEN}Alacritty configuration installed!${RC}"
     printf "%b\n" "${CYAN}Config location: ~/.config/alacritty/${RC}"

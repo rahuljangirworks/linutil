@@ -5,8 +5,8 @@ name = "Desktop"
 
 [[data.entries]]
 name = "Rahul's DWM Setup"
-description = "Install/update dwm-rahul, including Nord backgrounds and terminal configs"
-script = "desktop/dwm-rahul-setup.sh"
+description = "Install/update dwm-jangir, including Nord backgrounds and terminal configs"
+script = "desktop/dwm-jangir-setup.sh"
 task_list = "I MP FM SS"
 
 [[data]]
@@ -14,19 +14,19 @@ name = "Terminals"
 
 [[data.entries]]
 name = "Rahul's Alacritty Setup"
-description = "Install Alacritty with Rahul's Nordic theme config from dwm-rahul"
+description = "Install Alacritty with Rahul's Nordic theme config from dwm-jangir"
 script = "terminals/rahul-alacritty-setup.sh"
 task_list = "I MP FM"
 
 [[data.entries]]
 name = "Rahul's Ghostty Setup"
-description = "Install Ghostty with Rahul's config from dwm-rahul"
+description = "Install Ghostty with Rahul's config from dwm-jangir"
 script = "terminals/rahul-ghostty-setup.sh"
 task_list = "I MP FM"
 
 [[data.entries]]
 name = "Rahul's Kitty Setup"
-description = "Install Kitty with Rahul's Nord theme config from dwm-rahul"
+description = "Install Kitty with Rahul's Nord theme config from dwm-jangir"
 script = "terminals/rahul-kitty-setup.sh"
 task_list = "I MP FM"
 

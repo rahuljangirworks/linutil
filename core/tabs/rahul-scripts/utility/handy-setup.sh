@@ -177,7 +177,7 @@ EOF
 # ~/.xprofile   → sourced by LightDM's /etc/lightdm/Xsession before the WM.
 #                 Primary path for DWM + LightDM.
 # ~/.config/autostart/handy.desktop → XDG autostart fallback, processed by
-#                 `dex -a` in dwm-rahul's autostart.sh (covers startx too).
+#                 `dex -a` in dwm-jangir's autostart.sh (covers startx too).
 
 setupAutostart() {
     printf "%b\n" "${YELLOW}Configuring Handy to auto-start silently after login...${RC}"

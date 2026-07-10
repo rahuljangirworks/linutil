@@ -52,7 +52,7 @@ cloneMyBash() {
     fi
     mkdir -p "$HOME/.local/share"
     printf "%b\n" "${CYAN}Cloning Rahul's mybash fork...${RC}"
-    cd "$HOME" && git clone https://github.com/rahuljangirworks/mybash.git "$gitpath"
+    cd "$HOME" && git clone -b dev https://github.com/rahuljangirworks/mybash.git "$gitpath"
 }
 
 installFont() {

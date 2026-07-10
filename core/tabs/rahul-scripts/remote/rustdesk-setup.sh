@@ -200,7 +200,7 @@ enableService() {
 #   ~/.xprofile  — managed only when this looks like an X11/LightDM/startx
 #                  session path.
 #   ~/.config/autostart/rustdesk.desktop — XDG autostart used by common
-#                  desktop sessions and by dex in dwm-rahul.
+#                  desktop sessions and by dex in dwm-jangir.
 #
 # `rustdesk --tray` starts the tray icon only — no main window shown.
 

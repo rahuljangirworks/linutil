@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 # Description: Setup Rahul's customized Kitty configuration
-# Repository: https://github.com/rahuljangirworks/dwm-rahul
+# Repository: https://github.com/rahuljangirworks/dwm-jangir
 
 . ../../common-script.sh
 
@@ -42,12 +42,12 @@ setupKittyConfig() {
     rm -f "${HOME}/.config/kitty/kitty.conf"
     rm -f "${HOME}/.config/kitty/nord.conf"
 
-    # Download config files from Rahul's dwm-rahul repo (avoids merge conflicts with upstream)
-    printf "%b\n" "${CYAN}Downloading config from rahuljangirworks/dwm-rahul...${RC}"
-    curl -sSLo "${HOME}/.config/kitty/kitty.conf" \
-        "https://raw.githubusercontent.com/rahuljangirworks/dwm-rahul/main/config/kitty/kitty.conf"
-    curl -sSLo "${HOME}/.config/kitty/nord.conf" \
-        "https://raw.githubusercontent.com/rahuljangirworks/dwm-rahul/main/config/kitty/nord.conf"
+    # Download config files from Rahul's dwm-jangir repo (avoids merge conflicts with upstream)
+    printf "%b\n" "${CYAN}Downloading config from rahuljangirworks/dwm-jangir...${RC}"
+    curl -fsSL -o "$HOME/.config/kitty/kitty.conf" \
+        "https://raw.githubusercontent.com/rahuljangirworks/dwm-jangir/dev/config/kitty/kitty.conf"
+    curl -fsSL -o "$HOME/.config/kitty/nord.conf" \
+        "https://raw.githubusercontent.com/rahuljangirworks/dwm-jangir/dev/config/kitty/nord.conf"
 
     printf "%b\n" "${GREEN}Kitty configuration installed!${RC}"
     printf "%b\n" "${CYAN}Config location: ~/.config/kitty/${RC}"

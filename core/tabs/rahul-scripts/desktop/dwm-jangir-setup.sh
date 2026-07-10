@@ -1,16 +1,16 @@
 #!/bin/sh -e
 
-# Description: Install/update dwm-rahul through the fork's own installer.
-# Repository: https://github.com/rahuljangirworks/dwm-rahul
+# Description: Install/update dwm-jangir through the fork's own installer.
+# Repository: https://github.com/rahuljangirworks/dwm-jangir
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 . "$SCRIPT_DIR/../../common-script.sh"
 
-DWM_REPO_URL="https://github.com/rahuljangirworks/dwm-rahul.git"
-DWM_REPO_SSH_URL="git@github.com:rahuljangirworks/dwm-rahul.git"
-DWM_BRANCH="${DWM_BRANCH:-main}"
-DWM_DIR="${DWM_RAHUL_DIR:-$HOME/.local/share/dwm-rahul}"
+DWM_REPO_URL="https://github.com/rahuljangirworks/dwm-jangir.git"
+DWM_REPO_SSH_URL="git@github.com:rahuljangirworks/dwm-jangir.git"
+DWM_BRANCH="${DWM_BRANCH:-dev}"
+DWM_DIR="${DWM_JANGIR_DIR:-$HOME/.local/share/dwm-jangir}"
 DWM_INSTALL_PROFILE="${DWM_INSTALL_PROFILE:-full}"
 
 ensureGit() {
@@ -18,7 +18,7 @@ ensureGit() {
         return 0
     fi
 
-    printf "%b\n" "${YELLOW}Installing git so dwm-rahul can be cloned...${RC}"
+    printf "%b\n" "${YELLOW}Installing git so dwm-jangir can be cloned...${RC}"
     case "$PACKAGER" in
         pacman)
             "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm git
@@ -52,14 +52,14 @@ ensureDwmRepo() {
     fi
 
     if [ ! -d "$DWM_DIR/.git" ]; then
-        printf "%b\n" "${YELLOW}Cloning dwm-rahul...${RC}"
+        printf "%b\n" "${YELLOW}Cloning dwm-jangir...${RC}"
         git clone --branch "$DWM_BRANCH" "$DWM_REPO_URL" "$DWM_DIR"
         return 0
     fi
 
     origin_url=$(git -C "$DWM_DIR" remote get-url origin 2>/dev/null || true)
     case "$origin_url" in
-        "$DWM_REPO_URL" | "$DWM_REPO_SSH_URL" | "https://github.com/rahuljangirworks/dwm-rahul")
+        "$DWM_REPO_URL" | "$DWM_REPO_SSH_URL" | "https://github.com/rahuljangirworks/dwm-jangir")
             ;;
         *)
             printf "%b\n" "${RED}$DWM_DIR origin is not Rahul's dwm fork.${RC}"
@@ -75,7 +75,7 @@ ensureDwmRepo() {
         return 1
     fi
 
-    printf "%b\n" "${YELLOW}Fast-forwarding dwm-rahul from origin/$DWM_BRANCH...${RC}"
+    printf "%b\n" "${YELLOW}Fast-forwarding dwm-jangir from origin/$DWM_BRANCH...${RC}"
     git -C "$DWM_DIR" fetch origin "$DWM_BRANCH"
     git -C "$DWM_DIR" checkout "$DWM_BRANCH"
     git -C "$DWM_DIR" merge --ff-only "origin/$DWM_BRANCH"
@@ -87,9 +87,9 @@ runDwmInstaller() {
         return 1
     fi
 
-    printf "%b\n" "${YELLOW}Running dwm-rahul installer profile: $DWM_INSTALL_PROFILE${RC}"
+    printf "%b\n" "${YELLOW}Running dwm-jangir installer profile: $DWM_INSTALL_PROFILE${RC}"
     bash "$DWM_DIR/install.sh" --profile "$DWM_INSTALL_PROFILE" --non-interactive --yes
-    printf "%b\n" "${GREEN}dwm-rahul installation complete.${RC}"
+    printf "%b\n" "${GREEN}dwm-jangir installation complete.${RC}"
     printf "%b\n" "${CYAN}Log out and select dwm, or run startx when your setup uses it.${RC}"
 }
 
