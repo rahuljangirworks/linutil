@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# Description: Setup Rahul's customized mybash configuration with theme selection
+# Description: Setup Rahul's customized mybash configuration with machine-role theme selection
+# Keep the four roles stable: rahul, work, server, test. They are used as
+# terminal/SSH reminders for what kind of machine the shell is running on.
 case "$0" in
     */*) script_path="$0" ;;
     *) script_path="$(command -v -- "$0" 2>/dev/null || printf "%s\n" "$0")" ;;
@@ -16,6 +18,51 @@ unset script_path
 gitpath="$HOME/.local/share/mybash"
 THEMES_DIR="$SCRIPT_DIR/themes"
 MYBASH_THEMES_DIR="$gitpath/themes"
+REQUESTED_THEME="${MYBASH_THEME:-${LINUTIL_THEME:-}}"
+ASK_THEME=0
+
+usage() {
+    printf "%s\n" "Usage: $0 [--theme rahul|work|server|test] [--ask-theme]"
+    printf "%s\n" ""
+    printf "%s\n" "Machine role themes:"
+    printf "%s\n" "  rahul   Personal/default machine"
+    printf "%s\n" "  work    Work machine"
+    printf "%s\n" "  server  SSH/server machine reminder"
+    printf "%s\n" "  test    Test/sandbox/warning machine"
+}
+
+parseArgs() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --theme)
+                shift
+                if [ "$#" -eq 0 ]; then
+                    printf "%s\n" "Missing value for --theme" >&2
+                    usage >&2
+                    exit 1
+                fi
+                REQUESTED_THEME="$1"
+                ;;
+            --theme=*)
+                REQUESTED_THEME="${1#--theme=}"
+                ;;
+            --ask-theme)
+                ASK_THEME=1
+                REQUESTED_THEME=""
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                printf "%s\n" "Unknown option: $1" >&2
+                usage >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
 
 ensureBashrcLocal() {
     bashrc_local="$HOME/.bashrc.local"
@@ -183,8 +230,20 @@ installZoxide() {
 }
 
 selectTheme() {
-    requested_theme="${MYBASH_THEME:-${LINUTIL_THEME:-}}"
-    if [ -z "$requested_theme" ] && [ -r "$HOME/.config/mybash/theme.env" ]; then
+    requested_theme="$REQUESTED_THEME"
+    if [ "$ASK_THEME" -ne 1 ] && [ -n "$requested_theme" ]; then
+        if THEME_CHOICE="$(normalizeThemeChoice "$requested_theme")"; then
+            printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
+            return
+        fi
+        if [ ! -t 0 ]; then
+            printf "%b\n" "${RED}Unknown theme '$requested_theme'. Use rahul, work, server, or test.${RC}"
+            exit 1
+        fi
+        printf "%b\n" "${YELLOW}Ignoring unknown theme '$requested_theme'; asking manually.${RC}"
+    fi
+
+    if [ "$ASK_THEME" -ne 1 ] && [ -z "$requested_theme" ] && [ ! -t 0 ] && [ -r "$HOME/.config/mybash/theme.env" ]; then
         requested_theme=$(awk -F= '
             $1 == "export MYBASH_THEME" || $1 == "export LINUTIL_THEME" {
                 gsub(/"/, "", $2)
@@ -193,15 +252,16 @@ selectTheme() {
             }
         ' "$HOME/.config/mybash/theme.env" 2>/dev/null)
     fi
-    if [ -z "$requested_theme" ] && [ ! -t 0 ]; then
+    if [ "$ASK_THEME" -ne 1 ] && [ -z "$requested_theme" ] && [ ! -t 0 ]; then
         requested_theme="rahul"
     fi
-    if [ -n "$requested_theme" ]; then
+    if [ "$ASK_THEME" -ne 1 ] && [ -n "$requested_theme" ]; then
         if THEME_CHOICE="$(normalizeThemeChoice "$requested_theme")"; then
             printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
             return
         fi
-        printf "%b\n" "${YELLOW}Ignoring unknown theme '$requested_theme'; asking manually.${RC}"
+        printf "%b\n" "${RED}Unknown saved theme '$requested_theme'. Use rahul, work, server, or test.${RC}"
+        exit 1
     fi
 
     printf "%b\n" ""
@@ -311,6 +371,7 @@ linkConfig() {
 }
 
 # Main execution
+parseArgs "$@"
 checkEnv
 checkEscalationTool
 installDepend
