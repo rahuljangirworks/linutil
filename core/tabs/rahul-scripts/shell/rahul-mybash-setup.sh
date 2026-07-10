@@ -18,11 +18,10 @@ unset script_path
 gitpath="$HOME/.local/share/mybash"
 THEMES_DIR="$SCRIPT_DIR/themes"
 MYBASH_THEMES_DIR="$gitpath/themes"
-REQUESTED_THEME="${MYBASH_THEME:-${LINUTIL_THEME:-}}"
-ASK_THEME=0
+REQUESTED_THEME=""
 
 usage() {
-    printf "%s\n" "Usage: $0 [--theme rahul|work|server|test] [--ask-theme]"
+    printf "%s\n" "Usage: $0 [--theme rahul|work|server|test]"
     printf "%s\n" ""
     printf "%s\n" "Machine role themes:"
     printf "%s\n" "  rahul   Personal/default machine"
@@ -45,10 +44,6 @@ parseArgs() {
                 ;;
             --theme=*)
                 REQUESTED_THEME="${1#--theme=}"
-                ;;
-            --ask-theme)
-                ASK_THEME=1
-                REQUESTED_THEME=""
                 ;;
             -h|--help)
                 usage
@@ -231,36 +226,12 @@ installZoxide() {
 
 selectTheme() {
     requested_theme="$REQUESTED_THEME"
-    if [ "$ASK_THEME" -ne 1 ] && [ -n "$requested_theme" ]; then
+    if [ -n "$requested_theme" ]; then
         if THEME_CHOICE="$(normalizeThemeChoice "$requested_theme")"; then
             printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
             return
         fi
-        if [ ! -t 0 ]; then
-            printf "%b\n" "${RED}Unknown theme '$requested_theme'. Use rahul, work, server, or test.${RC}"
-            exit 1
-        fi
-        printf "%b\n" "${YELLOW}Ignoring unknown theme '$requested_theme'; asking manually.${RC}"
-    fi
-
-    if [ "$ASK_THEME" -ne 1 ] && [ -z "$requested_theme" ] && [ ! -t 0 ] && [ -r "$HOME/.config/mybash/theme.env" ]; then
-        requested_theme=$(awk -F= '
-            $1 == "export MYBASH_THEME" || $1 == "export LINUTIL_THEME" {
-                gsub(/"/, "", $2)
-                print $2
-                exit
-            }
-        ' "$HOME/.config/mybash/theme.env" 2>/dev/null)
-    fi
-    if [ "$ASK_THEME" -ne 1 ] && [ -z "$requested_theme" ] && [ ! -t 0 ]; then
-        requested_theme="rahul"
-    fi
-    if [ "$ASK_THEME" -ne 1 ] && [ -n "$requested_theme" ]; then
-        if THEME_CHOICE="$(normalizeThemeChoice "$requested_theme")"; then
-            printf "%b\n" "${GREEN}Selected theme: $THEME_CHOICE${RC}"
-            return
-        fi
-        printf "%b\n" "${RED}Unknown saved theme '$requested_theme'. Use rahul, work, server, or test.${RC}"
+        printf "%b\n" "${RED}Unknown theme '$requested_theme'. Use rahul, work, server, or test.${RC}"
         exit 1
     fi
 
@@ -278,7 +249,10 @@ selectTheme() {
     THEME_CHOICE=""
     while [ -z "$THEME_CHOICE" ]; do
         printf "${YELLOW}Enter theme number [1-4]: ${RC}"
-        read -r choice
+        if ! read -r choice; then
+            printf "%b\n" "${RED}No theme selected. Re-run interactively or pass --theme rahul|work|server|test.${RC}"
+            exit 1
+        fi
         if THEME_CHOICE="$(normalizeThemeChoice "$choice")"; then
             :
         else
