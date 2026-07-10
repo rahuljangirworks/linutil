@@ -39,11 +39,6 @@ description = "Install Rahul's customized mybash with Starship, fzf, zoxide"
 script = "shell/rahul-mybash-setup.sh"
 task_list = "I MP FM"
 
-[[data.entries]]
-name = "Rahul's Flameshot Setup"
-description = "Install and configure Flameshot with Rahul's warm bronze/beige theme and DWM keybindings"
-script = "shell/rahul-flameshot-setup.sh"
-
 [[data]]
 name = "Utility"
 
@@ -131,30 +126,8 @@ task_list = "I"
 name = "Infrastructure"
 
 [[data.entries]]
-name = "Rahul's Linutil Installer"
-description = "Install Linutil using the same flow as the upstream applications setup tab"
-script = "infrastructure/rahul-linutil-installer.sh"
-task_list = "I MP FM"
-
-[[data.entries.preconditions]]
-matches = false
-data = "command_exists"
-values = ["linutil"]
-
-[[data.entries]]
-name = "Rahul's Linutil Updater"
-description = "Update a Linutil installation made through cargo"
-script = "infrastructure/rahul-linutil-updater.sh"
-task_list = "I MP FM"
-
-[[data.entries.preconditions]]
-matches = true
-data = "command_exists"
-values = ["linutil"]
-
-[[data.entries]]
 name = "Rahul's Architecture Setup"
-description = "Sets up RahulOS: vault (~/.work/), workspace (~/work/), agent symlinks, and directory structure"
+description = "Sets up RahulOS: vault (~/work/.work/), workspace (~/work/), agent symlinks, and directory structure"
 script = "infrastructure/rahul-architecture-setup.sh"
 
 [[data]]
@@ -162,18 +135,33 @@ name = "Remote"
 
 [[data.entries]]
 name = "RustDesk Remote Desktop"
-description = "Install RustDesk remote desktop — auto-starts silently after login (rerunnable)"
+description = "Install RustDesk remote desktop — official RPM on Fedora/RHEL, native package when available, Flatpak fallback"
 script = "remote/rustdesk-setup.sh"
 task_list = "I SS"
 
 [[data.entries]]
-name = "SSH Setup & Hardening"
-description = "Install and secure SSH: custom port, strong crypto, Keys, drop-in config, post-quantum KEX (rerunnable)"
+name = "Server SSH"
+description = "Install and harden the SSH server: custom port, Rahul login key, strong crypto, and safe backups"
 script = "remote/secure-ssh.sh"
+task_list = "I SS"
+
+[[data.entries]]
+name = "Client SSH"
+description = "Set up a client machine: paste Rahul SSH key, create ssh config alias, and optional shell alias"
+script = "remote/ssh-client-alias-setup.sh"
 task_list = "I SS"
 
 [[data.entries]]
 name = "Tailscale VPN Setup"
 description = "Install and configure Tailscale VPN with custom hostname"
 script = "remote/tailscale-setup.sh"
+task_list = "I SS"
+
+[[data]]
+name = "Security"
+
+[[data.entries]]
+name = "Rahul Firewall Baseline"
+description = "Configure firewalld/UFW safely using the active SSH port from SSH hardening; web ports are optional"
+script = "security/rahul-firewall-baseline.sh"
 task_list = "I SS"

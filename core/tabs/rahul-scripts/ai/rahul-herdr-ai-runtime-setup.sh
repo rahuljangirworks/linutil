@@ -8,7 +8,7 @@
 HERDR_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/herdr"
 HERDR_CONFIG="$HERDR_CONFIG_DIR/config.toml"
 RAHULOS_LAUNCHER="$HOME/.local/bin/rahulos-herdr"
-RAHULOS_WORK="/home/rahul/.work"
+RAHULOS_WORK="$HOME/work/.work"
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
 
 ensureBasicTools() {
@@ -188,11 +188,11 @@ EOF
 writeRahulOSLauncher() {
     mkdir -p "$HOME/.local/bin"
 
-    cat > "$RAHULOS_LAUNCHER" <<'EOF'
+    cat > "$RAHULOS_LAUNCHER" <<EOF
 #!/bin/sh
 set -e
 
-cd /home/rahul/.work
+cd "$RAHULOS_WORK"
 exec herdr
 EOF
 
@@ -292,7 +292,7 @@ printAgentInventory() {
     printf "%b\n" "${GREEN}----------------------------------------${RC}"
     printf "%b\n" "${CYAN}  RahulOS rule:${RC}"
     printf "%b\n" "${CYAN}    Herdr owns panes and live status.${RC}"
-    printf "%b\n" "${CYAN}    /home/rahul/.work owns durable brain truth.${RC}"
+    printf "%b\n" "${CYAN}    $RAHULOS_WORK owns durable brain truth.${RC}"
     printf "%b\n" "${CYAN}    Agents use Herdr pane control only when HERDR_ENV=1.${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 }

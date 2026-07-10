@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Description: Install and harden SSH server with strong crypto, drop-in config, and container compatibility.
+# Description: Server SSH - install and harden SSH server with strong crypto, Rahul login key, and container compatibility.
 # Rerunnable: Yes - backs up config, validates before applying, auto-rollback on error
 # Author: Rahul Jangir
 # Based on: https://github.com/rahuljangirworks/secure-SSH
@@ -12,6 +12,10 @@ SSHD_CONFIG="/etc/ssh/sshd_config"
 SSHD_HARDENING_CONF="/etc/ssh/sshd_config.d/00-hardening.conf"
 BACKUP_DIR="/etc/ssh/backups"
 SSH_PORT="22"
+USER_SSH_DIR="$HOME/.ssh"
+AUTHORIZED_KEYS_FILE="$USER_SSH_DIR/authorized_keys"
+RAHUL_LOGIN_KEY="$USER_SSH_DIR/rahul_authorized_keys"
+RAHUL_LOGIN_KEY_PUB="$RAHUL_LOGIN_KEY.pub"
 
 # ─── Recommended Crypto Settings ───────────────────────────────────────────
 # Post-quantum ready (OpenSSH 10+)
@@ -27,7 +31,10 @@ RECOMMENDED_HOST_KEY_ALGOS="ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,rsa-sha
 
 # ─── Prompt for SSH port ───────────────────────────────────────────────────
 askSSHPort() {
-    CURRENT_PORT=$(grep -E "^#?Port " "$SSHD_CONFIG" 2>/dev/null | head -1 | awk '{print $2}' || echo "22")
+    CURRENT_PORT=$("$ESCALATION_TOOL" sshd -T 2>/dev/null | awk '$1 == "port" { print $2; exit }' || true)
+    if [ -z "$CURRENT_PORT" ]; then
+        CURRENT_PORT=$(grep -E "^#?Port " "$SSHD_HARDENING_CONF" "$SSHD_CONFIG" 2>/dev/null | head -1 | awk '{print $2}' || echo "22")
+    fi
     CURRENT_PORT="${CURRENT_PORT:-22}"
 
     printf "%b\n" "${CYAN}========================================${RC}"
@@ -169,6 +176,51 @@ ensureHostKeys() {
     fi
 }
 
+# ─── Create reusable Rahul login key ───────────────────────────────────────
+ensureRahulLoginKey() {
+    printf "%b\n" "${CYAN}========================================${RC}"
+    printf "%b\n" "${CYAN}Rahul SSH Login Key${RC}"
+    printf "%b\n" "${CYAN}========================================${RC}"
+
+    mkdir -p "$USER_SSH_DIR"
+    chmod 700 "$USER_SSH_DIR"
+
+    if [ -f "$RAHUL_LOGIN_KEY" ]; then
+        if ssh-keygen -y -f "$RAHUL_LOGIN_KEY" > "$RAHUL_LOGIN_KEY_PUB.tmp" 2>/dev/null; then
+            mv "$RAHUL_LOGIN_KEY_PUB.tmp" "$RAHUL_LOGIN_KEY_PUB"
+            printf "%b\n" "${GREEN}✓ Keeping existing login key: $RAHUL_LOGIN_KEY${RC}"
+            printf "%b\n" "${CYAN}→ Existing private key was not replaced${RC}"
+        else
+            rm -f "$RAHUL_LOGIN_KEY_PUB.tmp"
+            printf "%b\n" "${RED}✗ Existing login key is invalid: $RAHUL_LOGIN_KEY${RC}"
+            printf "%b\n" "${YELLOW}  Move it manually if you want the script to generate a new one.${RC}"
+            exit 1
+        fi
+    else
+        ssh-keygen -t ed25519 -f "$RAHUL_LOGIN_KEY" -N "" -C "rahul_authorized_keys@$(hostname)"
+        printf "%b\n" "${GREEN}✓ Created login key: $RAHUL_LOGIN_KEY${RC}"
+    fi
+
+    chmod 600 "$RAHUL_LOGIN_KEY"
+    chmod 644 "$RAHUL_LOGIN_KEY_PUB"
+
+    touch "$AUTHORIZED_KEYS_FILE"
+    chmod 600 "$AUTHORIZED_KEYS_FILE"
+
+    RAHUL_LOGIN_PUBLIC_KEY=$(cat "$RAHUL_LOGIN_KEY_PUB")
+    if grep -qxF "$RAHUL_LOGIN_PUBLIC_KEY" "$AUTHORIZED_KEYS_FILE" 2>/dev/null; then
+        printf "%b\n" "${GREEN}✓ Public key already allowed in authorized_keys${RC}"
+    else
+        if [ -s "$AUTHORIZED_KEYS_FILE" ]; then
+            printf "\n" >> "$AUTHORIZED_KEYS_FILE"
+        fi
+        printf "%s\n" "$RAHUL_LOGIN_PUBLIC_KEY" >> "$AUTHORIZED_KEYS_FILE"
+        printf "%b\n" "${GREEN}✓ Added Rahul login public key to authorized_keys${RC}"
+    fi
+
+    printf "%b\n" "${YELLOW}⚠ Keep this private key secret. Anyone with it can SSH into this user.${RC}"
+}
+
 # ─── Create SSH warning banner ─────────────────────────────────────────────
 createBanner() {
     if [ -f /etc/ssh/banner ]; then
@@ -211,6 +263,7 @@ AddressFamily inet
 
 # ─── Authentication ────────────────────────────────────────────────────────
 PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
 PasswordAuthentication no
 PermitRootLogin no
 PermitEmptyPasswords no
@@ -339,12 +392,41 @@ enableAndRestartSSH() {
     fi
 }
 
+# ─── Open SSH port in active firewall ──────────────────────────────────────
+configureFirewallForSSH() {
+    printf "%b\n" "${YELLOW}Configuring firewall for SSH port ${SSH_PORT}/tcp...${RC}"
+
+    if command -v firewall-cmd > /dev/null 2>&1 && firewall-cmd --state > /dev/null 2>&1; then
+        FIREWALL_ZONE=$(firewall-cmd --get-default-zone 2>/dev/null || printf "public")
+        FIREWALL_ZONE="${FIREWALL_ZONE:-public}"
+
+        if [ "$SSH_PORT" = "22" ]; then
+            "$ESCALATION_TOOL" firewall-cmd --permanent --zone="$FIREWALL_ZONE" --add-service=ssh
+            printf "%b\n" "${GREEN}✓ firewalld allows SSH service in zone $FIREWALL_ZONE${RC}"
+        else
+            "$ESCALATION_TOOL" firewall-cmd --permanent --zone="$FIREWALL_ZONE" --add-port="${SSH_PORT}/tcp"
+            printf "%b\n" "${GREEN}✓ firewalld allows custom SSH port ${SSH_PORT}/tcp in zone $FIREWALL_ZONE${RC}"
+        fi
+
+        "$ESCALATION_TOOL" firewall-cmd --reload
+        return 0
+    fi
+
+    if command -v ufw > /dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+        "$ESCALATION_TOOL" ufw limit "${SSH_PORT}/tcp"
+        printf "%b\n" "${GREEN}✓ UFW allows and rate-limits SSH port ${SSH_PORT}/tcp${RC}"
+        return 0
+    fi
+
+    printf "%b\n" "${YELLOW}→ No active firewalld/UFW detected. Skipping firewall rule.${RC}"
+}
+
 # ─── Print summary ────────────────────────────────────────────────────────
 printSummary() {
     IP_ADDR=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "your-ip")
 
     printf "%b\n" "${GREEN}========================================${RC}"
-    printf "%b\n" "${GREEN}SSH Setup & Hardening Complete! 🔒${RC}"
+    printf "%b\n" "${GREEN}Server SSH Setup Complete! 🔒${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 
     printf "%b\n" "${CYAN}Settings applied:${RC}"
@@ -352,6 +434,7 @@ printSummary() {
     printf "%b\n" "${CYAN}  • Root login:            disabled${RC}"
     printf "%b\n" "${CYAN}  • Password auth:         disabled${RC}"
     printf "%b\n" "${CYAN}  • Pubkey auth:           enabled${RC}"
+    printf "%b\n" "${CYAN}  • Rahul login key:       ${RAHUL_LOGIN_KEY}${RC}"
     printf "%b\n" "${CYAN}  • Max auth tries:        3${RC}"
     printf "%b\n" "${CYAN}  • Session timeout:       10 min${RC}"
     printf "%b\n" "${CYAN}  • X11 forwarding:        disabled${RC}"
@@ -373,7 +456,8 @@ printSummary() {
     printf "\n"
     printf "%b\n" "${YELLOW}⚠  CRITICAL: Test SSH access in a NEW terminal before${RC}"
     printf "%b\n" "${YELLOW}   closing this session!${RC}"
-    printf "%b\n" "${YELLOW}   ssh -p ${SSH_PORT} <user>@${IP_ADDR}${RC}"
+    printf "%b\n" "${YELLOW}   ssh -i ~/.ssh/rahul_authorized_keys -p ${SSH_PORT} $(id -un)@${IP_ADDR}${RC}"
+    printf "%b\n" "${CYAN}   Copy this private key to your client: ${RAHUL_LOGIN_KEY}${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 }
 
@@ -387,9 +471,11 @@ askSSHPort
 createBackup
 ensureDropInDir
 ensureHostKeys
+ensureRahulLoginKey
 createBanner
 writeHardeningConfig
 securePermissions
 validateConfig
+configureFirewallForSSH
 enableAndRestartSSH
 printSummary

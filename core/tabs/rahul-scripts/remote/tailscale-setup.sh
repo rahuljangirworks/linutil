@@ -1,131 +1,213 @@
 #!/bin/sh -e
 
-# Description: Install and configure Tailscale VPN
+# Description: Install and configure Tailscale VPN using the official Linux installer.
 # Repository: https://tailscale.com
-# Rerunnable: Yes - skips completed steps
+# Rerunnable: Yes - keeps existing login, starts service, and only runs tailscale up when needed.
 
 . ../../common-script.sh
 
-installTailscale() {
-    # Check if already installed
-    if command -v tailscale >/dev/null 2>&1; then
-        printf "%b\n" "${GREEN}✓ Tailscale already installed${RC}"
-        return 0
+AUTH_TOKEN=""
+TAILSCALE_HOSTNAME=""
+READ_SECRET_VALUE=""
+
+installTailscaleWithOfficialScript() {
+    printf "%b\n" "${YELLOW}Installing Tailscale with official installer...${RC}"
+
+    if [ "$(id -u)" = "0" ]; then
+        curl -fsSL https://tailscale.com/install.sh | sh
+    else
+        curl -fsSL https://tailscale.com/install.sh | "$ESCALATION_TOOL" sh
     fi
-    
-    printf "%b\n" "${YELLOW}Installing Tailscale...${RC}"
-    
+}
+
+installTailscaleWithPackageManager() {
+    printf "%b\n" "${YELLOW}Official installer failed, trying package manager fallback...${RC}"
+
     case "$PACKAGER" in
         pacman)
             "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm tailscale
             ;;
         apt-get|nala)
-            # Add Tailscale's GPG key and repository for Debian/Ubuntu
-            curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | "$ESCALATION_TOOL" tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-            curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | "$ESCALATION_TOOL" tee /etc/apt/sources.list.d/tailscale.list
             "$ESCALATION_TOOL" "$PACKAGER" update
             "$ESCALATION_TOOL" "$PACKAGER" install -y tailscale
             ;;
-        dnf|yum)
-            "$ESCALATION_TOOL" dnf config-manager --add-repo https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+        dnf|yum|zypper)
             "$ESCALATION_TOOL" "$PACKAGER" install -y tailscale
             ;;
-        zypper)
-            "$ESCALATION_TOOL" zypper ar -g -r https://pkgs.tailscale.com/stable/opensuse/tumbleweed/tailscale.repo
-            "$ESCALATION_TOOL" "$PACKAGER" --gpg-auto-import-keys refresh
+        apk)
+            "$ESCALATION_TOOL" "$PACKAGER" add tailscale
+            ;;
+        xbps-install)
+            "$ESCALATION_TOOL" "$PACKAGER" -Sy tailscale
+            ;;
+        eopkg)
             "$ESCALATION_TOOL" "$PACKAGER" install -y tailscale
             ;;
         *)
-            # Fallback to official install script
-            printf "%b\n" "${YELLOW}Using Tailscale's official install script...${RC}"
-            curl -fsSL https://tailscale.com/install.sh | sh
+            printf "%b\n" "${RED}✗ Unsupported package manager: $PACKAGER${RC}"
+            return 1
             ;;
     esac
-    
-    printf "%b\n" "${GREEN}✓ Tailscale installed${RC}"
+}
+
+installTailscale() {
+    if command_exists tailscale; then
+        printf "%b\n" "${GREEN}✓ Tailscale already installed${RC}"
+        return 0
+    fi
+
+    installTailscaleWithOfficialScript || installTailscaleWithPackageManager
+
+    if command_exists tailscale; then
+        printf "%b\n" "${GREEN}✓ Tailscale installed${RC}"
+    else
+        printf "%b\n" "${RED}✗ Tailscale installation failed${RC}"
+        exit 1
+    fi
 }
 
 enableTailscale() {
-    # Check if already running
-    if systemctl is-active --quiet tailscaled 2>/dev/null; then
-        printf "%b\n" "${GREEN}✓ Tailscale service already running${RC}"
-        return 0
-    fi
-    
-    printf "%b\n" "${YELLOW}Enabling and starting Tailscale service...${RC}"
-    "$ESCALATION_TOOL" systemctl enable --now tailscaled
-    printf "%b\n" "${GREEN}✓ Tailscale service enabled and started${RC}"
-}
-
-configureTailscale() {
-    # Check if already connected
-    if tailscale status >/dev/null 2>&1; then
-        CURRENT_STATUS=$(tailscale status --json 2>/dev/null | grep -o '"BackendState":"[^"]*"' | cut -d'"' -f4)
-        if [ "$CURRENT_STATUS" = "Running" ]; then
-            CURRENT_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
-            CURRENT_HOST=$(tailscale status --self --json 2>/dev/null | grep -o '"HostName":"[^"]*"' | cut -d'"' -f4 || hostname)
-            printf "%b\n" "${GREEN}✓ Tailscale already connected${RC}"
-            printf "%b\n" "${CYAN}  IP: $CURRENT_IP | Hostname: $CURRENT_HOST${RC}"
+    if command_exists systemctl; then
+        if systemctl is-active --quiet tailscaled 2>/dev/null; then
+            printf "%b\n" "${GREEN}✓ Tailscale service already running${RC}"
             return 0
         fi
+
+        printf "%b\n" "${YELLOW}Enabling and starting tailscaled...${RC}"
+        "$ESCALATION_TOOL" systemctl enable --now tailscaled
+        printf "%b\n" "${GREEN}✓ tailscaled enabled and started${RC}"
+        return 0
     fi
-    
+
+    if command_exists rc-service; then
+        printf "%b\n" "${YELLOW}Starting tailscaled with OpenRC...${RC}"
+        "$ESCALATION_TOOL" rc-update add tailscale default 2>/dev/null || true
+        "$ESCALATION_TOOL" rc-service tailscale start
+        printf "%b\n" "${GREEN}✓ Tailscale service started${RC}"
+        return 0
+    fi
+
+    if command_exists service; then
+        printf "%b\n" "${YELLOW}Starting tailscaled with service...${RC}"
+        "$ESCALATION_TOOL" service tailscaled start 2>/dev/null || "$ESCALATION_TOOL" service tailscale start
+        printf "%b\n" "${GREEN}✓ Tailscale service started${RC}"
+        return 0
+    fi
+
+    printf "%b\n" "${YELLOW}→ Could not detect service manager. Try manually: sudo tailscaled${RC}"
+}
+
+tailscaleBackendState() {
+    tailscale status --json 2>/dev/null |
+        sed -n 's/.*"BackendState"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+}
+
+tailscaleIsRunning() {
+    [ "$(tailscaleBackendState)" = "Running" ]
+}
+
+readSecret() {
+    prompt="$1"
+    secret=""
+
+    printf "%b" "$prompt"
+    if [ -t 0 ]; then
+        old_stty=$(stty -g 2>/dev/null || true)
+        if [ -n "$old_stty" ]; then
+            stty -echo
+        fi
+        read -r secret
+        if [ -n "$old_stty" ]; then
+            stty "$old_stty"
+            printf "\n"
+        fi
+    else
+        read -r secret
+    fi
+
+    READ_SECRET_VALUE="$secret"
+}
+
+promptConfiguration() {
     printf "%b\n" "${CYAN}========================================${RC}"
     printf "%b\n" "${CYAN}Tailscale Configuration${RC}"
     printf "%b\n" "${CYAN}========================================${RC}"
-    
-    # Ask for hostname
-    printf "%b" "${YELLOW}Enter hostname for this device (press Enter for default): ${RC}"
+
+    printf "%b" "${YELLOW}Device hostname in Tailscale [$(hostname)]: ${RC}"
     read -r TAILSCALE_HOSTNAME
-    
-    # Ask for auth token
-    printf "%b\n" "${CYAN}Authentication methods:${RC}"
-    printf "%b\n" "${CYAN}  1. Auth token (headless/automated setup)${RC}"
-    printf "%b\n" "${CYAN}  2. Browser login (interactive)${RC}"
-    printf "%b" "${YELLOW}Enter auth token (or press Enter for browser login): ${RC}"
-    read -r AUTH_TOKEN
-    
-    # Build the command
-    CMD_ARGS=""
-    
-    if [ -n "$TAILSCALE_HOSTNAME" ]; then
-        CMD_ARGS="--hostname=$TAILSCALE_HOSTNAME"
-    fi
-    
-    if [ -n "$AUTH_TOKEN" ]; then
-        printf "%b\n" "${YELLOW}→ Authenticating with token...${RC}"
-        # shellcheck disable=SC2086
-        "$ESCALATION_TOOL" tailscale up --authkey="$AUTH_TOKEN" $CMD_ARGS
+
+    case "$TAILSCALE_HOSTNAME" in
+        *[!A-Za-z0-9._-]*)
+            printf "%b\n" "${RED}Hostname can only use letters, numbers, dot, underscore, and dash.${RC}"
+            exit 1
+            ;;
+    esac
+
+    printf "%b\n" "${CYAN}Authentication:${RC}"
+    printf "%b\n" "${CYAN}  - Press Enter for browser login${RC}"
+    printf "%b\n" "${CYAN}  - Paste an auth key for headless/server setup${RC}"
+    readSecret "${YELLOW}Auth key (hidden, optional): ${RC}"
+    AUTH_TOKEN="$READ_SECRET_VALUE"
+}
+
+runTailscaleUp() {
+    if [ -n "$AUTH_TOKEN" ] && [ -n "$TAILSCALE_HOSTNAME" ]; then
+        "$ESCALATION_TOOL" tailscale up --auth-key="$AUTH_TOKEN" --hostname="$TAILSCALE_HOSTNAME"
+    elif [ -n "$AUTH_TOKEN" ]; then
+        "$ESCALATION_TOOL" tailscale up --auth-key="$AUTH_TOKEN"
+    elif [ -n "$TAILSCALE_HOSTNAME" ]; then
+        "$ESCALATION_TOOL" tailscale up --hostname="$TAILSCALE_HOSTNAME"
     else
-        printf "%b\n" "${YELLOW}→ Opening browser for authentication...${RC}"
-        # shellcheck disable=SC2086
-        "$ESCALATION_TOOL" tailscale up $CMD_ARGS
+        "$ESCALATION_TOOL" tailscale up
     fi
-    
+}
+
+configureTailscale() {
+    if tailscaleIsRunning; then
+        CURRENT_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
+        CURRENT_HOST=$(tailscale status --self --json 2>/dev/null |
+            sed -n 's/.*"HostName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        CURRENT_HOST="${CURRENT_HOST:-$(hostname)}"
+        printf "%b\n" "${GREEN}✓ Tailscale already connected${RC}"
+        printf "%b\n" "${CYAN}  IP: $CURRENT_IP | Hostname: $CURRENT_HOST${RC}"
+        return 0
+    fi
+
+    promptConfiguration
+
+    if [ -n "$AUTH_TOKEN" ]; then
+        printf "%b\n" "${YELLOW}→ Authenticating with auth key...${RC}"
+    else
+        printf "%b\n" "${YELLOW}→ Starting browser login...${RC}"
+    fi
+
+    runTailscaleUp
     printf "%b\n" "${GREEN}✓ Tailscale configured${RC}"
 }
 
 printStatus() {
     printf "%b\n" "${GREEN}========================================${RC}"
-    printf "%b\n" "${GREEN}Tailscale Setup Complete!${RC}"
+    printf "%b\n" "${GREEN}Tailscale Setup Complete${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
-    
-    # Show current status
+
+    STATE=$(tailscaleBackendState)
+    STATE="${STATE:-unknown}"
+    printf "%b\n" "${CYAN}State: $STATE${RC}"
+
     if tailscale status >/dev/null 2>&1; then
         TS_IP=$(tailscale ip -4 2>/dev/null || echo "not connected")
         printf "%b\n" "${CYAN}Tailscale IP: $TS_IP${RC}"
     fi
-    
-    printf "%b\n" "${CYAN}${RC}"
+
+    printf "%b\n" ""
     printf "%b\n" "${CYAN}Useful commands:${RC}"
-    printf "%b\n" "${CYAN}  tailscale status     - Check connection status${RC}"
-    printf "%b\n" "${CYAN}  tailscale ip         - Show your Tailscale IP${RC}"
-    printf "%b\n" "${CYAN}  tailscale ping <ip>  - Ping another device${RC}"
-    printf "%b\n" "${CYAN}  tailscale logout     - Disconnect from Tailscale${RC}"
+    printf "%b\n" "${CYAN}  tailscale status       - Check connection status${RC}"
+    printf "%b\n" "${CYAN}  tailscale ip           - Show Tailscale IP${RC}"
+    printf "%b\n" "${CYAN}  tailscale ping <host>  - Test another device${RC}"
+    printf "%b\n" "${CYAN}  tailscale logout       - Disconnect this device${RC}"
     printf "%b\n" "${GREEN}========================================${RC}"
 }
 
-# Main execution
 checkEnv
 checkEscalationTool
 installTailscale
