@@ -50,7 +50,7 @@ isInstalled() {
             dpkg -l handy 2>/dev/null | grep -q '^ii' && return 0
             ;;
         dnf|yum|zypper)
-            rpm -q handy 2>/dev/null | grep -q handy && return 0
+            rpm -qa | grep -i '^handy' >/dev/null && return 0
             ;;
         pacman)
             pacman -Qq handy 2>/dev/null && return 0
@@ -185,11 +185,19 @@ setupAutostart() {
     # Resolve the handy binary or AppImage path
     if command -v handy > /dev/null 2>&1; then
         HANDY_EXEC="handy"
+    elif command -v Handy > /dev/null 2>&1; then
+        HANDY_EXEC="Handy"
     elif [ -f "$HANDY_BIN" ]; then
         HANDY_EXEC="$HANDY_BIN"
     else
-        # Native .deb/.rpm installs the binary as 'handy' but may need full path
+        # Native .deb/.rpm installs the binary as 'handy' or 'Handy' but may need full path
         HANDY_EXEC="handy"
+    fi
+
+    # ── DWM override ──────────────────────────────────────────────────────────────
+    if [ "${XDG_CURRENT_DESKTOP}" = "dwm" ] || [ "${DESKTOP_SESSION}" = "dwm" ]; then
+        printf "%b\n" "${YELLOW}→ DWM session detected. Please add '${HANDY_EXEC} --start-hidden' to your DWM autostart script manually.${RC}"
+        return 0
     fi
 
     # ── XDG autostart (dex -a / startx fallback) ──────────────────────────────

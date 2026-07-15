@@ -288,6 +288,12 @@ setupAutostart() {
     printf "%b\n" "${YELLOW}Configuring RustDesk to auto-start silently after login...${RC}"
     detectLoginSession
 
+    if [ "${XDG_CURRENT_DESKTOP}" = "dwm" ] || [ "${DESKTOP_SESSION}" = "dwm" ]; then
+        RUSTDESK_XPROFILE_STATUS="skipped (DWM detected; manage via DWM autostart.sh)"
+        printf "%b\n" "${YELLOW}→ DWM session detected. Please add '${RUSTDESK_TRAY_CMD}' to your DWM autostart script manually.${RC}"
+        return 0
+    fi
+
     if shouldUseXprofile; then
         writeXprofileAutostart
     else
