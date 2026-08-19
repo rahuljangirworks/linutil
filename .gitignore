@@ -23,6 +23,11 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
+# Qt runtime artifacts
+SingletonCookie
+SingletonLock
+SingletonSocket
+
 # IDE and editor files
 .vscode/
 .opencode/

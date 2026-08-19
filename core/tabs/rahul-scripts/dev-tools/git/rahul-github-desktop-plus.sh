@@ -4,7 +4,7 @@
 # Fork: pol-rivero/github-desktop-plus (v3.5.9+)
 # Works on: Arch, Debian, Fedora, openSUSE
 
-. ../../common-script.sh
+. ../../../common-script.sh
 
 APP_NAME="GitHub Desktop Plus"
 APP_VERSION="3.5.9.2"

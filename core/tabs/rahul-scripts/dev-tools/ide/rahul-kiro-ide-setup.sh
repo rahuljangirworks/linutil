@@ -4,7 +4,7 @@
 # Looks for: ~/Downloads/kiro-ide-*.tar.gz (any version)
 # Works on: Arch, Debian, Fedora, openSUSE, Void, Alpine, Solus, any Linux
 
-. ../../common-script.sh
+. ../../../common-script.sh
 
 checkEnv
 
@@ -13,7 +13,7 @@ APP_NAME="Kiro IDE"
 INSTALL_DIR="$HOME/.local/share/kiro-ide"
 KIRO_BIN="$INSTALL_DIR/kiro"
 BIN_DIR="$HOME/.local/bin"
-BIN_LINK="$BIN_DIR/kiro"
+BIN_LINK="$BIN_DIR/kiro-ide"
 DESKTOP_DIR="$HOME/.local/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/kiro-ide.desktop"
 ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
@@ -28,7 +28,7 @@ printf "%b\n" "${YELLOW}           Kiro IDE — Universal Linux Installer       
 printf "%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${GREEN}  Phase 1: Detect kiro-ide-*.tar.gz in ~/Downloads               ${RC}"
 printf "%b\n" "${GREEN}  Phase 2: Extract & install to ~/.local/share/kiro-ide          ${RC}"
-printf "%b\n" "${GREEN}  Phase 3: Desktop entry + icon + ~/.local/bin/kiro launcher     ${RC}"
+printf "%b\n" "${GREEN}  Phase 3: Desktop entry + icon + ~/.local/bin/kiro-ide launcher ${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 echo ""
 
@@ -128,7 +128,7 @@ phase2_install() {
     chmod +x "$KIRO_BIN"
     printf "%b\n" "${GREEN}[✓] Kiro IDE installed: $KIRO_BIN${RC}"
 
-    # Create ~/.local/bin/kiro symlink so `kiro` works from terminal
+    # Create ~/.local/bin/kiro-ide symlink so `kiro-ide` works from terminal
     ln -sf "$KIRO_BIN" "$BIN_LINK"
     printf "%b\n" "${GREEN}[✓] Launcher symlink: $BIN_LINK -> $KIRO_BIN${RC}"
     echo ""
@@ -221,7 +221,7 @@ verify_setup() {
     fi
 
     if [ -L "$BIN_LINK" ]; then
-        printf "%b\n" "${GREEN}[✓] Terminal launcher: kiro -> $KIRO_BIN${RC}"
+        printf "%b\n" "${GREEN}[✓] Terminal launcher: kiro-ide -> $KIRO_BIN${RC}"
     else
         printf "%b\n" "${YELLOW}[~] Terminal launcher not found (symlink missing)${RC}"
     fi
@@ -246,7 +246,7 @@ verify_setup() {
         printf "%b\n" "${CYAN}=================================================================${RC}"
         echo ""
         printf "%b\n" "${YELLOW}  Launch options:${RC}"
-        printf "%b\n" "${CYAN}    kiro                  — terminal launcher (after shell restart)${RC}"
+        printf "%b\n" "${CYAN}    kiro-ide              — terminal launcher (after shell restart)${RC}"
         printf "%b\n" "${CYAN}    $KIRO_BIN    — direct binary${RC}"
         printf "%b\n" "${CYAN}    App menu → 'Kiro IDE' — desktop entry${RC}"
         echo ""

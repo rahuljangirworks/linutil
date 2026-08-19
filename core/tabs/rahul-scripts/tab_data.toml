@@ -73,62 +73,134 @@ script = "utility/input-share-setup.sh"
 task_list = "I SS"
 
 [[data]]
-name = "IDEs"
-
-[[data.entries]]
-name = "Rahul's Antigravity IDE Reinstall"
-description = "Clean reinstall Antigravity IDE from scratch — removes all user data, downloads fresh copy, sets up desktop entry with icon"
-script = "ide/rahul-antigravity-reinstall.sh"
-task_list = "I FM"
-
-[[data.entries]]
-name = "Rahul's Cursor Desktop Setup"
-description = "Install Cursor Desktop v3.5 from official golden .deb (AI code editor, desktop entry, /usr/bin/cursor)"
-script = "ide/rahul-cursor-desktop-setup.sh"
-task_list = "I FM"
-
-[[data.entries]]
-name = "Rahul's Kiro IDE Setup"
-description = "Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive, installs to ~/.local, desktop entry + icon"
-script = "ide/rahul-kiro-ide-setup.sh"
-task_list = "I FM"
-
-[[data.entries]]
-name = "Rahul's Codex Desktop Setup"
-description = "Install/update OpenAI Codex Desktop (AppImage) — downloads latest release, installs FUSE, icon, desktop entry + ~/.local/bin launcher (rerunnable)"
-script = "ide/rahul-codex-desktop-setup.sh"
-task_list = "I FM"
-
-[[data]]
-name = "AI & Agents"
-
-[[data.entries]]
-name = "RahulOS Herdr AI Runtime"
-description = "Install/update Herdr, Gemini CLI, Antigravity CLI, optional AionUi, Herdr integrations, skill, and .work launcher"
-script = "ai/rahul-herdr-ai-runtime-setup.sh"
-task_list = "I FM SS"
-
-[[data]]
-name = "Dev Tools"
+name = "Dev Tools - Git"
 
 [[data.entries]]
 name = "GitHub SSH Key Gen & Connect"
 description = "Auto-generates GitHub SSH keys, installs clipboard deps, and verifies connection"
-script = "dev-tools/rahul-github-ssh-setup.sh"
+script = "dev-tools/git/rahul-github-ssh-setup.sh"
 
 [[data.entries]]
 name = "Rahul's GitHub Desktop Plus"
 description = "Install GitHub Desktop Plus (v3.5.9) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
-script = "dev-tools/rahul-github-desktop-plus.sh"
+script = "dev-tools/git/rahul-github-desktop-plus.sh"
 task_list = "I"
 
 [[data]]
-name = "Infrastructure"
+name = "Dev Tools - IDE"
+
+[[data.entries]]
+name = "OpenHands Desktop UI"
+description = "Setup the official OpenHands Web UI as a Desktop App"
+script = "dev-tools/ide/rahul-openhands-ide-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Traycer AI Desktop"
+description = "Install/update the Traycer AI Desktop AppImage"
+script = "dev-tools/ide/rahul-traycer-ide-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Antigravity 2.0"
+description = "Clean reinstall Antigravity 2.0 v2.5.0 — installs to /opt/antigravity, fixes Electron sandbox, creates symlink + desktop entry"
+script = "dev-tools/ide/rahul-antigravity-2.0-reinstall.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Cursor"
+description = "Install Cursor AI code editor via official DNF repository — auto-updates included"
+script = "dev-tools/ide/rahul-cursor-setup.sh"
+task_list = "I"
+
+[[data.entries]]
+name = "Kiro IDE"
+description = "Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive, installs to ~/.local, desktop entry + icon"
+script = "dev-tools/ide/rahul-kiro-ide-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Codex"
+description = "Install/update OpenAI Codex (AppImage) — downloads latest release, installs FUSE, icon, desktop entry + ~/.local/bin launcher (rerunnable)"
+script = "dev-tools/ide/rahul-codex-setup.sh"
+task_list = "I FM"
+
+[[data]]
+name = "Dev Tools - CLI"
+
+[[data.entries]]
+name = "Traycer AI CLI"
+description = "Install/update the Traycer AI CLI via npm"
+script = "dev-tools/cli/rahul-traycer-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "OpenHands CLI"
+description = "Install/update the official OpenHands CLI via uv"
+script = "dev-tools/cli/rahul-openhands-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Pi AI CLI"
+description = "Install/update the official Pi AI Command Line Interface"
+script = "dev-tools/cli/rahul-pi-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Google Gemini CLI"
+description = "Install/update the official Google Gemini CLI via npm"
+script = "dev-tools/cli/rahul-gemini-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Antigravity CLI"
+description = "Install/update the official Antigravity Command Line Interface"
+script = "dev-tools/cli/rahul-antigravity-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "OpenCode AI CLI"
+description = "Install/update the official OpenCode AI Command Line Interface"
+script = "dev-tools/cli/rahul-opencode-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Kilo AI CLI"
+description = "Install/update the official Kilo AI Command Line Interface"
+script = "dev-tools/cli/rahul-kilo-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Cline"
+description = "Install/update Cline via npm globally"
+script = "dev-tools/cli/rahul-cline-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Cursor Agent (CLI)"
+description = "Install/update the official Cursor Agent (CLI) via curl installer"
+script = "dev-tools/cli/rahul-cursor-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Kiro CLI"
+description = "Install/update the official Kiro Command Line Interface"
+script = "dev-tools/cli/rahul-kiro-cli-setup.sh"
+task_list = "I FM"
+
+[[data.entries]]
+name = "Herdr AI Runtime"
+description = "Install/update Herdr, Gemini CLI, Antigravity CLI, optional AionUi, Herdr integrations, skill, and .work launcher"
+script = "dev-tools/cli/rahul-herdr-ai-runtime-setup.sh"
+task_list = "I FM SS"
+
+[[data]]
+name = "Work"
 
 [[data.entries]]
 name = "Rahul's Architecture Setup"
 description = "Sets up RahulOS: vault (~/work/.work/), workspace (~/work/), agent symlinks, and directory structure"
-script = "infrastructure/rahul-architecture-setup.sh"
+script = "work/rahul-architecture-setup.sh"
 
 [[data]]
 name = "Remote"

@@ -1,22 +1,22 @@
 #!/bin/sh -e
 
-# Description: Install OpenAI Codex Desktop (unofficial Linux AppImage)
+# Description: Install OpenAI Codex (unofficial Linux AppImage)
 # Downloads the latest AppImage from cuongducle/codex-linux, installs icon + desktop entry
 # Works on: Arch, Debian, Fedora, openSUSE, Void, Alpine, any Linux with FUSE
 
-. ../../common-script.sh
+. ../../../common-script.sh
 
 checkEnv
 
 # ─── Globals ──────────────────────────────────────────────────────────────────
-APP_NAME="Codex Desktop"
+APP_NAME="Codex"
 APPIMAGE_API="https://api.github.com/repos/cuongducle/codex-linux/releases/latest"
-INSTALL_DIR="$HOME/.local/share/codex-desktop"
-APPIMAGE_PATH="$INSTALL_DIR/codex-desktop.AppImage"
+INSTALL_DIR="$HOME/.local/share/codex"
+APPIMAGE_PATH="$INSTALL_DIR/codex.AppImage"
 BIN_DIR="$HOME/.local/bin"
-BIN_LINK="$BIN_DIR/codex-desktop"
+BIN_LINK="$BIN_DIR/codex"
 DESKTOP_DIR="$HOME/.local/share/applications"
-DESKTOP_FILE="$DESKTOP_DIR/codex-desktop.desktop"
+DESKTOP_FILE="$DESKTOP_DIR/codex.desktop"
 ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
 ICON_FILE="$ICON_DIR/chatgpt-logo.png"
 ICON_URL="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/ChatGPT-Logo.svg/960px-ChatGPT-Logo.svg.png"
@@ -24,7 +24,7 @@ ICON_URL="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/ChatGPT-Logo
 # ─── Header ───────────────────────────────────────────────────────────────────
 clear 2>/dev/null || true
 printf "%b\n" "${CYAN}=================================================================${RC}"
-printf "%b\n" "${YELLOW}         Codex Desktop — Linux Installer (AppImage)             ${RC}"
+printf "%b\n" "${YELLOW}         Codex — Linux Installer (AppImage)             ${RC}"
 printf "%b\n" "${CYAN}=================================================================${RC}"
 printf "%b\n" "${GREEN}  Phase 1: Install FUSE (required for AppImages)                ${RC}"
 printf "%b\n" "${GREEN}  Phase 2: Download AppImage from GitHub release                ${RC}"
@@ -65,12 +65,12 @@ phase1_fuse() {
 
 # ─── Phase 2: Download AppImage ──────────────────────────────────────────────
 phase2_download() {
-    printf "%b\n" "${CYAN}━━━ Phase 2: Downloading Codex Desktop AppImage ━━━━━━━━━━━━━━${RC}"
+    printf "%b\n" "${CYAN}━━━ Phase 2: Downloading Codex AppImage ━━━━━━━━━━━━━━${RC}"
 
     mkdir -p "$INSTALL_DIR" "$BIN_DIR" "$DESKTOP_DIR" "$ICON_DIR"
 
     if [ -f "$APPIMAGE_PATH" ]; then
-        printf "%b\n" "${YELLOW}[~] Codex Desktop already installed at $INSTALL_DIR${RC}"
+        printf "%b\n" "${YELLOW}[~] Codex already installed at $INSTALL_DIR${RC}"
         printf "%b\n" "${YELLOW}    Updating to latest release...${RC}"
         rm -f "$APPIMAGE_PATH"
     fi
@@ -125,7 +125,7 @@ phase3_desktop() {
 [Desktop Entry]
 Type=Application
 Name=$APP_NAME
-Comment=OpenAI Codex Desktop — AI-powered coding agent
+Comment=OpenAI Codex — AI-powered coding agent
 Exec=$APPIMAGE_PATH %U
 Icon=$ICON_FIELD
 Terminal=false
@@ -153,12 +153,12 @@ persist_path() {
     printf "%b\n" "${CYAN}━━━ PATH Configuration ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RC}"
 
     PATH_BLOCK='
-# Codex Desktop / local bin (managed by linutil)
+# Codex / local bin (managed by linutil)
 export PATH="$HOME/.local/bin:$PATH"'
 
     for rc_file in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile" "$HOME/.bash_profile"; do
         if [ -f "$rc_file" ]; then
-            if ! grep -q 'Codex Desktop / local bin' "$rc_file"; then
+            if ! grep -q 'Codex / local bin' "$rc_file"; then
                 printf '%s\n' "$PATH_BLOCK" >> "$rc_file"
                 printf "%b\n" "${GREEN}[✓] PATH added to $(basename "$rc_file")${RC}"
             else
@@ -189,7 +189,7 @@ verify_setup() {
     fi
 
     if [ -L "$BIN_LINK" ]; then
-        printf "%b\n" "${GREEN}[✓] Terminal launcher: codex-desktop -> AppImage${RC}"
+        printf "%b\n" "${GREEN}[✓] Terminal launcher: codex -> AppImage${RC}"
     else
         printf "%b\n" "${YELLOW}[~] Terminal launcher missing${RC}"
     fi
@@ -210,13 +210,13 @@ verify_setup() {
     echo ""
     if [ "$PASS" = true ]; then
         printf "%b\n" "${CYAN}=================================================================${RC}"
-        printf "%b\n" "${GREEN}  ✅  Codex Desktop installation complete!                       ${RC}"
+        printf "%b\n" "${GREEN}  ✅  Codex installation complete!                       ${RC}"
         printf "%b\n" "${CYAN}=================================================================${RC}"
         echo ""
         printf "%b\n" "${YELLOW}  Launch options:${RC}"
-        printf "%b\n" "${CYAN}    codex-desktop             — terminal launcher (after rehash)${RC}"
+        printf "%b\n" "${CYAN}    codex             — terminal launcher (after rehash)${RC}"
         printf "%b\n" "${CYAN}    $APPIMAGE_PATH  — direct AppImage${RC}"
-        printf "%b\n" "${CYAN}    App menu → 'Codex Desktop' — desktop entry${RC}"
+        printf "%b\n" "${CYAN}    App menu → 'Codex' — desktop entry${RC}"
         echo ""
         printf "%b\n" "${YELLOW}  Note: You may also need the Codex CLI separately:${RC}"
         printf "%b\n" "${CYAN}    npm i -g @openai/codex   — or use yay -S openai-codex${RC}"

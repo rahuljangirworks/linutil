@@ -3,7 +3,7 @@
 # Description: Install/update Herdr and bind it to RahulOS agent workflows.
 # Rerunnable:  Yes - existing config is preserved and integrations are reinstalled safely.
 
-. ../../common-script.sh
+. ../../../common-script.sh
 
 HERDR_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/herdr"
 HERDR_CONFIG="$HERDR_CONFIG_DIR/config.toml"
