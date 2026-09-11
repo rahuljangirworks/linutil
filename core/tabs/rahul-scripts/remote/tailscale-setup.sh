@@ -145,9 +145,18 @@ enableTailscale() {
 setupTailscaleSystray() {
     printf "%b\n" "${YELLOW}Configuring Tailscale System Tray for DWM / Quickshell...${RC}"
 
-    # 1. Try official tailscale configure tool if available in this release
-    if tailscale configure systray --help >/dev/null 2>&1; then
-        tailscale configure systray --enable-startup=freedesktop >/dev/null 2>&1 || true
+    # 1. Install local tailscale-tray script if present in repo
+    REPO_TRAY_SCRIPT="$HOME/work/personal-projacts/dwm-jangir/scripts/tailscale-tray"
+    if [ -f "$REPO_TRAY_SCRIPT" ]; then
+        mkdir -p "$HOME/.local/bin"
+        cp -f "$REPO_TRAY_SCRIPT" "$HOME/.local/bin/tailscale-tray"
+        chmod +x "$HOME/.local/bin/tailscale-tray"
+        printf "%b\n" "${GREEN}✓ Installed native tailscale-tray into ~/.local/bin${RC}"
+    fi
+
+    TRAY_CMD="tailscale-tray"
+    if ! command_exists tailscale-tray; then
+        TRAY_CMD="tailscale systray"
     fi
 
     # 2. Ensure universal XDG autostart desktop entry exists
@@ -155,19 +164,19 @@ setupTailscaleSystray() {
     DESKTOP_FILE="$AUTOSTART_DIR/tailscale-systray.desktop"
     mkdir -p "$AUTOSTART_DIR"
 
-    cat > "$DESKTOP_FILE" << 'EOF'
+    cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Type=Application
 Name=Tailscale
 Comment=Tailscale Client System Tray
-Exec=tailscale systray
+Exec=$TRAY_CMD
 Icon=tailscale
 Terminal=false
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
-    printf "%b\n" "${GREEN}✓ Configured ~/.config/autostart/tailscale-systray.desktop (XDG Autostart / dex)${RC}"
+    printf "%b\n" "${GREEN}✓ Configured ~/.config/autostart/tailscale-systray.desktop ($TRAY_CMD)${RC}"
 
     # 3. Configure ~/.xprofile fallback with idempotent guard
     XPROFILE="$HOME/.xprofile"
@@ -187,7 +196,11 @@ EOF
     cat >> "$XPROFILE" << 'EOF'
 
 # tailscale autostart
-if command -v tailscale >/dev/null 2>&1 && ! pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
+if command -v tailscale-tray >/dev/null 2>&1; then
+    if ! pgrep -u "$(id -u)" -f "tailscale-tray" >/dev/null 2>&1; then
+        tailscale-tray >/dev/null 2>&1 &
+    fi
+elif command -v tailscale >/dev/null 2>&1 && ! pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
     tailscale systray >/dev/null 2>&1 &
 fi
 EOF
@@ -196,13 +209,19 @@ EOF
 
     # 4. Launch immediately if in an active graphical session (DWM / Quickshell)
     if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        if ! pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
-            printf "%b\n" "${CYAN}Launching tailscale systray in active desktop panel...${RC}"
-            tailscale systray >/dev/null 2>&1 &
+        # Stop old tailscale systray if switching to tailscale-tray
+        if [ "$TRAY_CMD" = "tailscale-tray" ] && pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
+            pkill -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1 || true
             sleep 1
         fi
 
-        if pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
+        if ! pgrep -u "$(id -u)" -f "$TRAY_CMD" >/dev/null 2>&1; then
+            printf "%b\n" "${CYAN}Launching $TRAY_CMD in active desktop panel...${RC}"
+            $TRAY_CMD >/dev/null 2>&1 &
+            sleep 1
+        fi
+
+        if pgrep -u "$(id -u)" -f "$TRAY_CMD" >/dev/null 2>&1; then
             printf "%b\n" "${GREEN}✓ Tailscale tray icon is running in Quickshell top bar!${RC}"
         fi
     fi
