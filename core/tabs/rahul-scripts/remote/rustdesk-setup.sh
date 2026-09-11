@@ -415,6 +415,37 @@ setupAutostart() {
     fi
 }
 
+# ── Themed Tray Icon for DWM / Quickshell ────────────────────────────────────
+
+setupRustDeskTrayIcon() {
+    printf "%b\n" "${YELLOW}Configuring themed RustDesk tray icon for DWM / Quickshell...${RC}"
+
+    ASSET_DIRS="$HOME/.config/quickshell/assets $HOME/.local/share/dwm-jangir/config/quickshell/assets"
+    REPO_DIR="$HOME/work/personal-projacts/dwm-jangir"
+    if [ -d "$REPO_DIR/config/quickshell/assets" ]; then
+        ASSET_DIRS="$ASSET_DIRS $REPO_DIR/config/quickshell/assets"
+    fi
+
+    for d in $ASSET_DIRS; do
+        mkdir -p "$d"
+        cat > "$d/rustdesk-tray.svg" << 'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>RustDesk</title>
+  <g transform="translate(12, 12) scale(0.62) translate(-30.9845, -904.7482)" fill="#ECEFF4">
+    <path d="m 40.309479,897.8163 -2.13532,2.12189 c -0.37566,0.3367 -0.557321,0.87878 -0.34675,1.33694 1.422559,2.97602 0.882559,6.52382 -1.45146,8.85602 -2.33502,2.33131 -5.88696,2.8707 -8.866524,1.44881 -0.43892,-0.1965 -0.953964,-0.03 -1.292057,0.31269 l -2.169919,2.16641 c -0.255052,0.2498 -0.3806,0.6023 -0.34007,0.95579 0.04054,0.3545 0.243189,0.6695 0.54767,0.8541 5.1129,3.09451 11.678999,2.30561 15.911089,-1.9116 4.232081,-4.2162 5.03876,-10.77258 1.9554,-15.88729 -0.17696,-0.31103 -0.48935,-0.52234 -0.84425,-0.5717 -0.35489,-0.0503 -0.71276,0.0681 -0.967809,0.31794 z M 21.84293,895.5107 c -4.252844,4.20042 -5.086212,10.75775 -2.019657,15.88535 0.176955,0.312 0.488356,0.5233 0.843254,0.5727 0.354897,0.05 0.712761,-0.0679 0.968802,-0.319 l 2.123457,-2.1091 c 0.384554,-0.3367 0.572151,-0.8847 0.358619,-1.3488 -1.422557,-2.976 -0.883552,-6.52373 1.451458,-8.85593 2.334022,-2.33127 5.886947,-2.87085 8.865525,-1.44997 0.433981,0.19451 0.94211,0.033 1.281191,-0.29971 l 2.181779,-2.1792 c 0.255051,-0.24884 0.380601,-0.60134 0.340071,-0.95581 -0.04149,-0.35349 -0.24319,-0.66847 -0.54767,-0.85411 -5.121801,-3.06787 -11.678015,-2.25523 -15.893292,1.97185 z"/>
+  </g>
+</svg>
+EOF
+    done
+
+    printf "%b\n" "${GREEN}✓ Installed minimal Nord rustdesk-tray.svg${RC}"
+
+    # Reload Quickshell if running so the icon updates immediately
+    if command -v dwm-quickshell-controlcenter >/dev/null 2>&1 && pgrep -u "$(id -u)" -x quickshell >/dev/null 2>&1; then
+        dwm-quickshell-controlcenter action restart-quickshell >/dev/null 2>&1 || true
+    fi
+}
+
 # ── Status ───────────────────────────────────────────────────────────────────
 
 printStatus() {
@@ -431,6 +462,7 @@ printStatus() {
     printf "%b\n" "${CYAN}  Session          : ${RUSTDESK_SESSION_TYPE} / ${RUSTDESK_DISPLAY_MANAGER}${RC}"
     printf "%b\n" "${CYAN}  XDG autostart    : ${RUSTDESK_XDG_STATUS}${RC}"
     printf "%b\n" "${CYAN}  ~/.xprofile      : ${RUSTDESK_XPROFILE_STATUS}${RC}"
+    printf "%b\n" "${CYAN}  Tray Icon        : minimal Nord SVG (~/.config/quickshell/assets/rustdesk-tray.svg)${RC}"
     if [ "$RUSTDESK_INSTALL_KIND" = "native" ]; then
         if systemctl is-active --quiet rustdesk 2>/dev/null; then
             printf "%b\n" "${CYAN}  Boot service     : active (rustdesk.service running)${RC}"
@@ -454,4 +486,5 @@ checkEscalationTool
 installRustDesk
 enableService
 setupAutostart
+setupRustDeskTrayIcon
 printStatus

@@ -154,6 +154,50 @@ setupTailscaleSystray() {
         printf "%b\n" "${GREEN}✓ Installed native tailscale-tray into ~/.local/bin${RC}"
     fi
 
+    # 1b. Install minimal themed Tailscale SVGs (Connected & Disconnected)
+    ASSET_DIRS="$HOME/.config/quickshell/assets $HOME/.local/share/dwm-jangir/config/quickshell/assets"
+    REPO_DIR="$HOME/work/personal-projacts/dwm-jangir"
+    if [ -d "$REPO_DIR/config/quickshell/assets" ]; then
+        ASSET_DIRS="$ASSET_DIRS $REPO_DIR/config/quickshell/assets"
+    fi
+
+    for d in $ASSET_DIRS; do
+        mkdir -p "$d"
+        cat > "$d/tailscale-connected.svg" << 'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>Tailscale Connected</title>
+  <g fill="#ECEFF4">
+    <circle cx="12" cy="7.6" r="1.6"/>
+    <circle cx="7.6" cy="12" r="1.6"/>
+    <circle cx="12" cy="12" r="1.6"/>
+    <circle cx="16.4" cy="12" r="1.6"/>
+    <circle cx="12" cy="16.4" r="1.6"/>
+    <circle cx="7.6" cy="7.6" r="1.2" opacity="0.32"/>
+    <circle cx="16.4" cy="7.6" r="1.2" opacity="0.32"/>
+    <circle cx="7.6" cy="16.4" r="1.2" opacity="0.32"/>
+    <circle cx="16.4" cy="16.4" r="1.2" opacity="0.32"/>
+  </g>
+</svg>
+EOF
+        cat > "$d/tailscale-disconnected.svg" << 'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>Tailscale Disconnected</title>
+  <g fill="#D8DEE9" opacity="0.38">
+    <circle cx="12" cy="7.6" r="1.6"/>
+    <circle cx="7.6" cy="12" r="1.6"/>
+    <circle cx="12" cy="12" r="1.6"/>
+    <circle cx="16.4" cy="12" r="1.6"/>
+    <circle cx="12" cy="16.4" r="1.6"/>
+    <circle cx="7.6" cy="7.6" r="1.2" opacity="0.4"/>
+    <circle cx="16.4" cy="7.6" r="1.2" opacity="0.4"/>
+    <circle cx="7.6" cy="16.4" r="1.2" opacity="0.4"/>
+    <circle cx="16.4" cy="16.4" r="1.2" opacity="0.4"/>
+  </g>
+</svg>
+EOF
+    done
+    printf "%b\n" "${GREEN}✓ Installed minimal Nord tailscale-connected.svg and tailscale-disconnected.svg${RC}"
+
     TRAY_CMD="tailscale-tray"
     if ! command_exists tailscale-tray; then
         TRAY_CMD="tailscale systray"
@@ -344,11 +388,12 @@ printStatus() {
     printf "%b\n" "${CYAN}  XDG Autostart  : ~/.config/autostart/tailscale-systray.desktop${RC}"
     printf "%b\n" "${CYAN}  ~/.xprofile    : enabled (~/.xprofile)${RC}"
 
-    if pgrep -u "$(id -u)" -f "tailscale systray" >/dev/null 2>&1; then
+    if pgrep -u "$(id -u)" -f "tailscale" >/dev/null 2>&1; then
         printf "%b\n" "${CYAN}  System Tray    : active (running in Quickshell top bar)${RC}"
     else
-        printf "%b\n" "${CYAN}  System Tray    : configured (starts on login or run 'tailscale systray')${RC}"
+        printf "%b\n" "${CYAN}  System Tray    : configured (starts on login or run 'tailscale-tray')${RC}"
     fi
+    printf "%b\n" "${CYAN}  Tray Icon      : minimal Nord SVG (tailscale-connected.svg)${RC}"
 
     printf "%b\n" "${GREEN}========================================${RC}"
     printf "%b\n" "${CYAN}Useful commands:${RC}"
