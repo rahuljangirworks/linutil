@@ -82,7 +82,7 @@ script = "dev-tools/git/rahul-github-ssh-setup.sh"
 
 [[data.entries]]
 name = "Rahul's GitHub Desktop Plus"
-description = "Install GitHub Desktop Plus (v3.5.9) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
+description = "Install Desktop Plus (v3.6+) — up-to-date fork with Copilot commit messages, Bitbucket & GitLab support"
 script = "dev-tools/git/rahul-github-desktop-plus.sh"
 task_list = "I"
 
