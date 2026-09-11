@@ -19,9 +19,16 @@ installGhostty() {
                 "$ESCALATION_TOOL" "$PACKAGER" -Sy ghostty
                 ;;
             dnf)
-                printf "%b\n" "${CYAN}Enabling scottames/ghostty COPR repository for Fedora...${RC}"
-                "$ESCALATION_TOOL" dnf copr enable -y scottames/ghostty
-                "$ESCALATION_TOOL" dnf install -y ghostty
+                # Ghostty is in the official Fedora repos since Fedora 41.
+                # Try the official repo first; fall back to the scottames COPR
+                # only if the package is not available (e.g., older Fedora).
+                if "$ESCALATION_TOOL" dnf install -y ghostty 2>/dev/null; then
+                    printf "%b\n" "${GREEN}✓ Ghostty installed from official Fedora repository${RC}"
+                else
+                    printf "%b\n" "${YELLOW}→ Ghostty not in official repos, enabling scottames/ghostty COPR...${RC}"
+                    "$ESCALATION_TOOL" dnf copr enable -y scottames/ghostty
+                    "$ESCALATION_TOOL" dnf install -y ghostty
+                fi
                 ;;
             *)
                 "$ESCALATION_TOOL" "$PACKAGER" install -y ghostty

@@ -124,15 +124,14 @@ install_cursor() {
             fi
             ;;
         apt-get|nala)
-            printf "%b\n" "${YELLOW}[*] Installing Cursor .deb...${RC}"
-            CURSOR_DEB=$(mktemp /tmp/cursor-XXXXXX.deb)
-            curl -fL "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/3.5" -o "$CURSOR_DEB" || {
-                printf "%b\n" "${RED}[✗] Download failed${RC}"
-                rm -f "$CURSOR_DEB"
-                return 1
-            }
-            "$ESCALATION_TOOL" dpkg -i "$CURSOR_DEB" || "$ESCALATION_TOOL" apt-get install -f -y
-            rm -f "$CURSOR_DEB"
+            printf "%b\n" "${YELLOW}[*] Configuring official Cursor APT repository (downloads.cursor.com)...${RC}"
+            "$ESCALATION_TOOL" "$PACKAGER" install -y curl gpg
+            curl -fsSL https://downloads.cursor.com/keys/anysphere.asc | \
+                "$ESCALATION_TOOL" gpg --dearmor --yes -o /usr/share/keyrings/cursor.gpg
+            echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/cursor.gpg] https://downloads.cursor.com/aptrepo stable main" | \
+                "$ESCALATION_TOOL" tee /etc/apt/sources.list.d/cursor.list >/dev/null
+            "$ESCALATION_TOOL" "$PACKAGER" update
+            "$ESCALATION_TOOL" "$PACKAGER" install -y cursor
             ;;
         *)
             printf "%b\n" "${RED}[✗] Unsupported package manager: $PACKAGER${RC}"
