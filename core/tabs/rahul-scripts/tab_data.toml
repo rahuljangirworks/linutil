@@ -102,6 +102,12 @@ script = "ai-agents/rahul-cursor-setup.sh"
 task_list = "I"
 
 [[data.entries]]
+name = "Orca ADE"
+description = "Install/update Orca ADE — Agent Development Environment for parallel AI coding agents across git worktrees"
+script = "ai-agents/rahul-orca-setup.sh"
+task_list = "I MP FM"
+
+[[data.entries]]
 name = "Cursor Agent (CLI)"
 description = "Install/update the official Cursor Agent (CLI) via curl installer"
 script = "ai-agents/rahul-cursor-cli-setup.sh"
