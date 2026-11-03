@@ -2,7 +2,7 @@
 
 # Description: Install/update Google Gemini CLI via npm
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

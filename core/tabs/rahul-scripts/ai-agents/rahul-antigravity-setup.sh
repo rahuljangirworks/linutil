@@ -12,8 +12,8 @@ SCRIPT_DIR="$(dirname "$script_path")"
 SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
 unset script_path
 
-if [ -f "$SCRIPT_DIR/../../../common-script.sh" ]; then
-    . "$SCRIPT_DIR/../../../common-script.sh"
+if [ -f "$SCRIPT_DIR/../../common-script.sh" ]; then
+    . "$SCRIPT_DIR/../../common-script.sh"
 elif [ -f "../../common-script.sh" ]; then
     . ../../common-script.sh
 else
@@ -44,7 +44,7 @@ ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
 ICON_FILE_APP="$ICON_DIR/antigravity.png"
 ICON_FILE_IDE="$ICON_DIR/antigravity-ide.png"
 ICON_URL="https://res.cloudinary.com/utehls4u/image/upload/v1793682047/Google-Antigravity-Icon-Full-Color_eosfko.png"
-ASSET_ICON="$SCRIPT_DIR/../../assets/google-antigravity.png"
+ASSET_ICON="$SCRIPT_DIR/../assets/google-antigravity.png"
 
 VERSION_APP="2.28.2"
 BUILD_APP="5937220255875072"

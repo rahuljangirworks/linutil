@@ -2,7 +2,7 @@
 
 # Description: Install/update Cursor CLI (Cursor Agent) via official script
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

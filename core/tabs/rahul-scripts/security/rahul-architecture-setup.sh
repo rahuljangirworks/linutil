@@ -15,10 +15,11 @@ find_ssh_setup_script() {
     script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd -P || pwd)"
 
     for candidate in \
+        "$script_dir/../dev-tools/git/rahul-github-ssh-setup.sh" \
         "$script_dir/../dev-tools/rahul-github-ssh-setup.sh" \
-        "$PWD/dev-tools/rahul-github-ssh-setup.sh" \
-        "$PWD/core/tabs/rahul-scripts/dev-tools/rahul-github-ssh-setup.sh" \
-        "$HOME/work/personal-projacts/linutil/core/tabs/rahul-scripts/dev-tools/rahul-github-ssh-setup.sh"
+        "$PWD/dev-tools/git/rahul-github-ssh-setup.sh" \
+        "$PWD/core/tabs/rahul-scripts/dev-tools/git/rahul-github-ssh-setup.sh" \
+        "$HOME/work/personal-projacts/linutil/core/tabs/rahul-scripts/dev-tools/git/rahul-github-ssh-setup.sh"
     do
         if [ -x "$candidate" ]; then
             printf "%s\n" "$candidate"

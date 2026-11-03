@@ -2,7 +2,7 @@
 
 # Description: Install/update OpenHands CLI via uv
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

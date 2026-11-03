@@ -2,7 +2,7 @@
 
 # Description: Install/update Cline via npm
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

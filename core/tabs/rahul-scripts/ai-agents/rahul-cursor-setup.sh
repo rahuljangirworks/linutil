@@ -4,7 +4,7 @@
 # Source: https://downloads.cursor.com/yumrepo
 # Works on: Fedora, RHEL, CentOS, openSUSE
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 

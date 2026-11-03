@@ -2,7 +2,7 @@
 
 # Description: Install/update Traycer AI Desktop AppImage
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 

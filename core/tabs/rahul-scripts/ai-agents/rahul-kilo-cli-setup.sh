@@ -2,7 +2,7 @@
 
 # Description: Install/update Kilo AI CLI via official script
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

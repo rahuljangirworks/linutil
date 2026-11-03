@@ -2,7 +2,7 @@
 
 # Description: Install/update Kiro CLI via the official installation script
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

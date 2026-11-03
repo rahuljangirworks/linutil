@@ -2,7 +2,7 @@
 
 # Description: Install/update Traycer AI CLI
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 checkEscalationTool

@@ -4,7 +4,7 @@
 # Looks for: ~/Downloads/kiro-ide-*.tar.gz (any version)
 # Works on: Arch, Debian, Fedora, openSUSE, Void, Alpine, Solus, any Linux
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 

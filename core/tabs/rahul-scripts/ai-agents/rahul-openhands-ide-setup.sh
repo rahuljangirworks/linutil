@@ -2,7 +2,7 @@
 
 # Description: Setup OpenHands Web UI as a Desktop App
 
-. ../../../common-script.sh
+. ../../common-script.sh
 
 checkEnv
 
