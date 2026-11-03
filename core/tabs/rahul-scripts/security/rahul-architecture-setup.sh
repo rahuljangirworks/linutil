@@ -19,7 +19,7 @@ find_ssh_setup_script() {
         "$script_dir/../dev-tools/rahul-github-ssh-setup.sh" \
         "$PWD/dev-tools/git/rahul-github-ssh-setup.sh" \
         "$PWD/core/tabs/rahul-scripts/dev-tools/git/rahul-github-ssh-setup.sh" \
-        "$HOME/work/personal-projacts/linutil/core/tabs/rahul-scripts/dev-tools/git/rahul-github-ssh-setup.sh"
+        "$HOME/work/opensource-projacts/linutil/core/tabs/rahul-scripts/dev-tools/git/rahul-github-ssh-setup.sh"
     do
         if [ -x "$candidate" ]; then
             printf "%s\n" "$candidate"

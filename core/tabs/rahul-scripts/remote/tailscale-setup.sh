@@ -146,7 +146,7 @@ setupTailscaleSystray() {
     printf "%b\n" "${YELLOW}Configuring Tailscale System Tray for DWM / Quickshell...${RC}"
 
     # 1. Install local tailscale-tray script if present in repo
-    REPO_TRAY_SCRIPT="$HOME/work/personal-projacts/dwm-jangir/scripts/tailscale-tray"
+    REPO_TRAY_SCRIPT="$HOME/work/opensource-projacts/dwm-jangir/scripts/tailscale-tray"
     if [ -f "$REPO_TRAY_SCRIPT" ]; then
         mkdir -p "$HOME/.local/bin"
         cp -f "$REPO_TRAY_SCRIPT" "$HOME/.local/bin/tailscale-tray"
@@ -156,7 +156,7 @@ setupTailscaleSystray() {
 
     # 1b. Install minimal themed Tailscale SVGs (Connected & Disconnected)
     ASSET_DIRS="$HOME/.config/quickshell/assets $HOME/.local/share/dwm-jangir/config/quickshell/assets"
-    REPO_DIR="$HOME/work/personal-projacts/dwm-jangir"
+    REPO_DIR="$HOME/work/opensource-projacts/dwm-jangir"
     if [ -d "$REPO_DIR/config/quickshell/assets" ]; then
         ASSET_DIRS="$ASSET_DIRS $REPO_DIR/config/quickshell/assets"
     fi

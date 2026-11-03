@@ -1,1 +1,1 @@
-../../.work/04-personal-projacts/linutil/PROJECT-STATE.md
+../../.work/10-opensource-projacts/linutil/PROJECT-STATE.md

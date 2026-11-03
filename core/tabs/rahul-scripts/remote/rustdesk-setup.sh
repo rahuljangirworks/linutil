@@ -421,7 +421,7 @@ setupRustDeskTrayIcon() {
     printf "%b\n" "${YELLOW}Configuring themed RustDesk tray icon for DWM / Quickshell...${RC}"
 
     ASSET_DIRS="$HOME/.config/quickshell/assets $HOME/.local/share/dwm-jangir/config/quickshell/assets"
-    REPO_DIR="$HOME/work/personal-projacts/dwm-jangir"
+    REPO_DIR="$HOME/work/opensource-projacts/dwm-jangir"
     if [ -d "$REPO_DIR/config/quickshell/assets" ]; then
         ASSET_DIRS="$ASSET_DIRS $REPO_DIR/config/quickshell/assets"
     fi

@@ -1,1 +1,1 @@
-../../.work/04-personal-projacts/linutil/PROJECT-CONTROLS.md
+../../.work/10-opensource-projacts/linutil/PROJECT-CONTROLS.md
