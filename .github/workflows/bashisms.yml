@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install devscripts
         run: sudo apt-get update && sudo apt-get install -y devscripts
@@ -22,7 +22,7 @@ jobs:
       - name: Get changed .sh files (PR only)
         id: changed-sh-files
         if: github.event_name == 'pull_request'
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
         with:
           files: '**/*.sh'
 

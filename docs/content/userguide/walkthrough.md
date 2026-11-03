@@ -60,6 +60,7 @@ https://github.com/ChrisTitusTech/neovim
 ### Web Browsers
 
 - **Brave**: Brave is a free and open-source web browser developed by Brave Software, Inc. based on the Chromium web browser.
+- **Brave Origin**: Brave Origin is a minimalist version of Brave that strips out optional features like VPN, crypto wallet, Rewards, and Leo AI, keeping only core privacy protections and ad blocking.
 - **Chromium**: Chromium is an open-source web browser project started by Google, to provide the source code for the proprietary Google Chrome browser.
 - **Google Chrome**: Google Chrome is a fast, secure, and free web browser, built for the modern web.
 - **LibreWolf**: LibreWolf is a fork of Firefox, focused on privacy, security, and freedom.
@@ -73,6 +74,7 @@ https://github.com/ChrisTitusTech/neovim
 - **Alacritty**: Alacritty is a modern terminal emulator that comes with sensible defaults, but allows for extensive configuration. By integrating with other applications, rather than reimplementing their functionality, it manages to provide a flexible set of features with high performance. The supported platforms currently consist of BSD, Linux, macOS and Windows. This command installs and configures alacritty terminal emulator.
 - **Android Debloater**: Universal Android Debloater (UAD) is a tool designed to help users remove bloatware and unnecessary pre-installed applications from Android devices, enhancing performance and user experience.
 - **Bash Prompt**: The .bashrc file is a script that runs every time a new terminal session is started in Unix-like operating systems. It is used to configure the shell session, set up aliases, define functions, and more, making the terminal easier to use and more powerful. This command configures the key sections and functionalities defined in the .bashrc file from CTT's mybash repository. https://github.com/ChrisTitusTech/mybash
+- **Dank Shell**: DankMaterialShell is a complete desktop shell for niri, Hyprland, MangoWC, Sway, labwc, Scroll, Miracle WM, and other Wayland compositors. It replaces waybar, swaylock, swayidle, mako, fuzzel, polkit, and everything else you'd normally stitch together to make a desktop
 - **Docker**: Docker is an open platform that uses OS-level virtualization to deliver software in packages called containers.
 - **Fastfetch**: Fastfetch is a neofetch-like tool for fetching system information and displaying it prettily. It is written mainly in C, with performance and customizability in mind. This command installs fastfetch and configures from CTT's mybash repository. https://github.com/ChrisTitusTech/mybash
 - **Flatpak / Flathub**: Flatpak is a universal application sandbox for Linux that uses isolated packages from Flathub to prevent conflicts and system alterations, while alleviating dependency concerns. This command installs Flatpak and adds the Flathub repository
@@ -81,9 +83,11 @@ https://github.com/ChrisTitusTech/neovim
 - **Kitty**: kitty is a free and open-source GPU-accelerated terminal emulator for Linux, macOS, and some BSD distributions, focused on performance and features. kitty is written in a mix of C and Python programming languages. This command installs and configures kitty.
 - **Linutil Installer**: Installs a distro-specific Linutil package locally.
 - **Linutil Updater**: Updates your local Linutil crate installation.
+- **Noctalia Shell**: Noctalia is a native Wayland desktop shell for people who want a polished, configurable Linux desktop without stitching together a separate bar, launcher, notification daemon, lock screen, wallpaper tool, and settings UI.
 - **Podman**: Podman is a daemon-less open platform that uses OS-level virtualization to deliver software in packages called containers.
 - **Podman-compose**: Podman Compose is a tool for defining and running multi-container applications using Podman.
 - **Rofi**: Rofi is a window switcher, run dialog, ssh-launcher and dmenu replacement that started as a clone of simpleswitcher, written by Sean Pringle and later expanded by Dave Davenport. This command installs and configures rofi with configuration from CTT's DWM repo. https://github.com/ChrisTitusTech/dwm-titus
+- **Shelly**: Shelly is a modern, visual, and intuitive interface for your Arch Linux system. Not just a wrapper, but a native ground-up experience.
 - **ZSH Prompt**: The Z shell is a Unix shell that can be used as an interactive login shell and as a command interpreter for shell scripting. Zsh is an extended Bourne shell with many improvements, including some features of Bash, ksh, and tcsh. This command installs ZSH prompt and provides basic configuration.
 
 ## Gaming
@@ -145,12 +149,14 @@ https://github.com/AdnanHodzic/auto-cpufreq
 - **Heroic**: Manage Heroic launcher installation with Install, Uninstall, or Abort actions.
 - **Arc Raiders Titus Mods**: Applies optimized game configuration files from ChrisTitusTech/arc-raiders. Sets Engine.ini to read-only to prevent the game from overwriting the settings, disables motion blur, and enables VRR optimizations.
 - **Diablo II Resurrected Loot Filter**: Installs a loot filter for Diablo II Resurrected from ChrisTitusTech/d2r-loot-filter. Highlights high runes and other valuable items. Works on Battle.net and single player. After install, add launch option: -mod lootfilter -txt
+- **EverQuest Legends MIDI Fix**: Configures native Lutris to start a stable FluidSynth MIDI device, maps Wine to it, and loads the SC-55 SoundCanvas bank for EverQuest Legends music. Downloads a verified 177 MiB SoundFont and preserves the original Lutris and Wine registry configuration.
 - **Fallout 76 INI and Mods**: Installs a custom Fallout76Custom.ini and mods from ChrisTitusTech/fallout76-configs via Steam. Improves performance and stability with quality of life tweaks.
 - **Starfield Titus INI and Mods**: Installs custom Starfield mods from ChrisTitusTech/starfield-config via steam.
 
 ## Security
 
 - **FirewallD Firewall Baselines (CTT)**: Configure FirewallD with CTT's recommended baseline rules for improved system security. For more information visit: https://christitus.com/linux-security-mistakes
+- **Lynis Security Audit**: Install Lynis when needed, run an elevated system security audit with live results, then optionally remove Lynis.
 - **UFW Firewall Baselines (CTT)**: Developed to ease iptables firewall configuration, UFW provides a user friendly way to create an IPv4 or IPv6 host-based firewall. This command installs UFW and configures UFW based on CTT's recommended rules. For more information visit: https://christitus.com/linux-security-mistakes
 
 ## System Setup
@@ -239,6 +245,7 @@ https://github.com/ChrisTitusTech/dwm-titus
 
 - **Bluetooth Manager**: This utility is designed to manage bluetooth in your system
 - **Numlock on Startup**: This utility is designed to enable Num Lock at boot, rather than within desktop environments like KDE or GNOME
+- **Locale Setup**: This allows the user to set their locale
 - **Ollama**: This utility is designed to manage ollama in your system
 - **Ranalama**: This utility is designed to manage ramalama in your system
 - **Service Manager**: This utility is designed to manage services in your system
