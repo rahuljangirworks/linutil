@@ -102,9 +102,9 @@ script = "dev-tools/ide/rahul-traycer-ide-setup.sh"
 task_list = "I FM"
 
 [[data.entries]]
-name = "Antigravity 2.0"
-description = "Clean reinstall Antigravity 2.0 v2.5.0 — installs to /opt/antigravity, fixes Electron sandbox, creates symlink + desktop entry"
-script = "dev-tools/ide/rahul-antigravity-2.0-reinstall.sh"
+name = "Google Antigravity"
+description = "Clean setup & reinstall for Google Antigravity: choose IDE (v2.6.0), Agent App (v2.28.2), or CLI (agy) with pristine cleanup"
+script = "dev-tools/ide/rahul-antigravity-setup.sh"
 task_list = "I FM"
 
 [[data.entries]]
@@ -154,7 +154,7 @@ task_list = "I FM"
 
 [[data.entries]]
 name = "Antigravity CLI"
-description = "Install/update the official Antigravity Command Line Interface"
+description = "Install, update, or remove the official Antigravity Command Line Interface (agy)"
 script = "dev-tools/cli/rahul-antigravity-cli-setup.sh"
 task_list = "I FM"
 
