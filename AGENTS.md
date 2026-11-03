@@ -12,7 +12,7 @@ Read `SPEC.md` before making architectural or behavior changes.
 ## RahulOS Vault Bridge
 
 This workspace is paired with the RahulOS vault project at
-`/home/rahul/.work/04-personal-projacts/linutil/`. The local `.agent`
+`/home/rahul/work/.work/04-personal-projacts/linutil/`. The local `.agent`
 symlink points to that vault agent folder when present. For Rahul-specific
 fork policy, project state, and handoff notes, read `.agent/AGENTS.md`,
 `.agent/plan/PHASES.md`, `.agent/rules/04-upstream-sync.md`, and
