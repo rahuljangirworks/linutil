@@ -44,8 +44,8 @@
 - **Cline**: Install/update Cline via npm globally
 - **Kiro IDE**: Install Kiro IDE from ~/Downloads tar.gz — auto-detects archive, installs to ~/.local, desktop entry + icon
 - **Kiro CLI**: Install/update the official Kiro Command Line Interface
-- **Traycer AI Desktop**: Install/update the Traycer AI Desktop AppImage
-- **Traycer AI CLI**: Install/update the Traycer AI CLI via npm
+- **Traycer AI**: Install/update Traycer AI — Agent orchestration platform for parallel coding agents across git worktrees
+- **Traycer AI CLI**: Install/update the Traycer AI CLI (@traycerai/cli) via npm
 - **OpenCode AI CLI**: Install/update the official OpenCode AI Command Line Interface
 - **Kilo AI CLI**: Install/update the official Kilo AI Command Line Interface
 - **Pi AI CLI**: Install/update the official Pi AI Command Line Interface

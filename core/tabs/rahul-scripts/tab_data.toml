@@ -156,14 +156,14 @@ script = "ai-agents/rahul-kiro-cli-setup.sh"
 task_list = "I FM"
 
 [[data.entries]]
-name = "Traycer AI Desktop"
-description = "Install/update the Traycer AI Desktop AppImage"
-script = "ai-agents/rahul-traycer-ide-setup.sh"
-task_list = "I FM"
+name = "Traycer AI"
+description = "Install/update Traycer AI — Agent orchestration platform for parallel coding agents across git worktrees"
+script = "ai-agents/rahul-traycer-setup.sh"
+task_list = "I MP FM"
 
 [[data.entries]]
 name = "Traycer AI CLI"
-description = "Install/update the Traycer AI CLI via npm"
+description = "Install/update the Traycer AI CLI (@traycerai/cli) via npm"
 script = "ai-agents/rahul-traycer-cli-setup.sh"
 task_list = "I FM"
 
