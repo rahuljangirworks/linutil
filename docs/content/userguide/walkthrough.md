@@ -53,15 +53,16 @@
 
 ### Remote Access & Networking
 
+- **Home Lab SSH Setup**: Audit this machine first, then interactively configure its OpenSSH client, server or both
 - **RustDesk Remote Desktop**: Install RustDesk remote desktop — official RPM on Fedora/RHEL, native package when available, Flatpak fallback
-- **Server SSH**: Install and harden the SSH server: custom port, Rahul login key, strong crypto, and safe backups
-- **Client SSH**: Set up a client machine: paste Rahul SSH key, create ssh config alias, and optional shell alias
-- **Tailscale VPN Setup**: Install and configure Tailscale VPN with custom hostname
+- **Server SSH**: Audit OpenSSH, confirm verified SSH ports in the terminal, then apply key-only hardening with rollback
+- **Client SSH**: Create a short LAN alias and optional -ts Tailscale alias after confirming the destination, port, host key and Ed25519 key
+- **Tailscale VPN Setup**: Prompt for Tailscale enrollment, SSH mode, operator and desktop changes, then confirm before applying
 
 ### System & Security
 
 - **Rahul's Architecture Setup**: Sets up RahulOS: vault (~/work/.work/), workspace (~/work/), agent symlinks, and directory structure
-- **Rahul Firewall Baseline**: Configure firewalld/UFW safely using the active SSH port from SSH hardening; web ports are optional
+- **Rahul Firewall Baseline**: Audit SSH exposure, prompt for the verified port and trusted source, then confirm before changing firewalld or UFW
 
 ## Applications Setup
 

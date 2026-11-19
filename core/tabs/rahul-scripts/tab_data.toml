@@ -195,6 +195,13 @@ task_list = "I FM SS"
 name = "Remote Access & Networking"
 
 [[data.entries]]
+name = "Home Lab SSH Setup"
+description = "Audit this machine first, then interactively configure its OpenSSH client, server or both"
+script = "remote/home-lab-ssh-setup.sh"
+task_list = "I FM SS"
+multi_select = false
+
+[[data.entries]]
 name = "RustDesk Remote Desktop"
 description = "Install RustDesk remote desktop — official RPM on Fedora/RHEL, native package when available, Flatpak fallback"
 script = "remote/rustdesk-setup.sh"
@@ -202,21 +209,24 @@ task_list = "I SS"
 
 [[data.entries]]
 name = "Server SSH"
-description = "Install and harden the SSH server: custom port, Rahul login key, strong crypto, and safe backups"
+description = "Audit OpenSSH, confirm verified SSH ports in the terminal, then apply key-only hardening with rollback"
 script = "remote/secure-ssh.sh"
-task_list = "I SS"
+task_list = "PFM SS"
+multi_select = false
 
 [[data.entries]]
 name = "Client SSH"
-description = "Set up a client machine: paste Rahul SSH key, create ssh config alias, and optional shell alias"
+description = "Create a short LAN alias and optional -ts Tailscale alias after confirming the destination, port, host key and Ed25519 key"
 script = "remote/ssh-client-alias-setup.sh"
-task_list = "I SS"
+task_list = "I FM"
+multi_select = false
 
 [[data.entries]]
 name = "Tailscale VPN Setup"
-description = "Install and configure Tailscale VPN with custom hostname"
+description = "Prompt for Tailscale enrollment, SSH mode, operator and desktop changes, then confirm before applying"
 script = "remote/tailscale-setup.sh"
-task_list = "I SS"
+task_list = "I FM SS"
+multi_select = false
 
 [[data]]
 name = "System & Security"
@@ -228,6 +238,7 @@ script = "security/rahul-architecture-setup.sh"
 
 [[data.entries]]
 name = "Rahul Firewall Baseline"
-description = "Configure firewalld/UFW safely using the active SSH port from SSH hardening; web ports are optional"
+description = "Audit SSH exposure, prompt for the verified port and trusted source, then confirm before changing firewalld or UFW"
 script = "security/rahul-firewall-baseline.sh"
-task_list = "I SS"
+task_list = "PFM"
+multi_select = false
