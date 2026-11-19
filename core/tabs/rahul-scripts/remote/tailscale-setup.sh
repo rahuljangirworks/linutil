@@ -1,10 +1,9 @@
 #!/bin/sh -e
 
 # Description: Install and configure Tailscale VPN using the official Linux installer.
-#              Configures system service, sets non-root desktop operator permissions,
-#              and integrates the official Tailscale system tray with DWM / Quickshell.
+#              Prompts before service changes, SSH mode changes, operator access, and tray setup.
 # Repository: https://tailscale.com
-# Rerunnable: Yes - keeps existing login, starts service, and manages systray autostart.
+# Rerunnable: Yes - keeps existing enrollment and asks before optional configuration changes.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/../../common-script.sh" ]; then
@@ -21,6 +20,10 @@ TAILSCALE_HOSTNAME=""
 READ_SECRET_VALUE=""
 FORCE_UPDATE=0
 TRAY_ONLY=0
+DISABLE_TAILSCALE_SSH=no
+SET_TAILSCALE_OPERATOR=no
+CONFIGURE_TRAY=no
+PREVIOUSLY_CONNECTED=no
 
 for arg in "$@"; do
     case "$arg" in
@@ -131,9 +134,9 @@ enableTailscale() {
         printf "%b\n" "${YELLOW}→ Could not detect service manager. Try manually: sudo tailscaled${RC}"
     fi
 
-    # Set non-root desktop operator so tray widget and CLI work without sudo
+    # Only change the operator when the user explicitly selected it in preflight.
     DESKTOP_USER="${SUDO_USER:-$USER}"
-    if [ -n "$DESKTOP_USER" ] && [ "$DESKTOP_USER" != "root" ]; then
+    if [ "$SET_TAILSCALE_OPERATOR" = yes ] && [ -n "$DESKTOP_USER" ] && [ "$DESKTOP_USER" != "root" ]; then
         printf "%b\n" "${YELLOW}Setting Tailscale operator to '$DESKTOP_USER'...${RC}"
         "$ESCALATION_TOOL" tailscale set --operator="$DESKTOP_USER" >/dev/null 2>&1 || true
         printf "%b\n" "${GREEN}✓ Tailscale operator set to '$DESKTOP_USER' (manage via tray without sudo)${RC}"
@@ -329,33 +332,35 @@ promptConfiguration() {
 }
 
 runTailscaleUp() {
-    if [ -n "$AUTH_TOKEN" ] && [ -n "$TAILSCALE_HOSTNAME" ]; then
-        tailscale up --auth-key="$AUTH_TOKEN" --hostname="$TAILSCALE_HOSTNAME"
-    elif [ -n "$AUTH_TOKEN" ]; then
-        tailscale up --auth-key="$AUTH_TOKEN"
-    elif [ -n "$TAILSCALE_HOSTNAME" ]; then
-        tailscale up --hostname="$TAILSCALE_HOSTNAME"
-    else
-        tailscale up
+    set -- up --ssh=false
+    if [ -n "$TAILSCALE_HOSTNAME" ]; then
+        set -- "$@" "--hostname=$TAILSCALE_HOSTNAME"
+    fi
+    if [ -n "$AUTH_TOKEN" ]; then
+        set -- "$@" "--auth-key=$AUTH_TOKEN"
+    fi
+    tailscale "$@"
+}
+
+offerOpenSSHTransport() {
+    current_ssh=$(tailscale get ssh 2>/dev/null || true)
+    if [ "$current_ssh" = "false" ]; then
+        printf "%b\n" "${GREEN}Tailscale SSH is already disabled. Use standard OpenSSH for SSH access.${RC}"
+        return 0
+    fi
+
+    printf "%s\n" 'The home lab plan uses standard OpenSSH. Verify a fresh LAN key login and keep a recovery console open before changing this setting.'
+    printf "%s" 'Type DISABLE to turn off Tailscale SSH on this device, or press Enter to leave its current setting: '
+    IFS= read -r ssh_choice || return 0
+    if [ "$ssh_choice" = "DISABLE" ]; then
+        DISABLE_TAILSCALE_SSH=yes
     fi
 }
 
 configureTailscale() {
-    if [ "$TRAY_ONLY" -eq 1 ]; then
-        return 0
-    fi
-
     if tailscaleIsRunning; then
-        CURRENT_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
-        CURRENT_HOST=$(tailscale status --self --json 2>/dev/null |
-            sed -n 's/.*"HostName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-        CURRENT_HOST="${CURRENT_HOST:-$(hostname)}"
-        printf "%b\n" "${GREEN}✓ Tailscale already connected${RC}"
-        printf "%b\n" "${CYAN}  IP: $CURRENT_IP | Hostname: $CURRENT_HOST${RC}"
         return 0
     fi
-
-    promptConfiguration
 
     if [ -n "$AUTH_TOKEN" ]; then
         printf "%b\n" "${YELLOW}→ Authenticating with auth key...${RC}"
@@ -364,7 +369,63 @@ configureTailscale() {
     fi
 
     runTailscaleUp
-    printf "%b\n" "${GREEN}✓ Tailscale configured${RC}"
+    printf "%b\n" "${GREEN}✓ Tailscale configured with Tailscale SSH disabled${RC}"
+}
+
+askOptionalChanges() {
+    DESKTOP_USER="${SUDO_USER:-$USER}"
+    if [ -n "$DESKTOP_USER" ] && [ "$DESKTOP_USER" != "root" ]; then
+        printf 'Allow %s to manage Tailscale without sudo? [y/N]: ' "$DESKTOP_USER"
+        IFS= read -r operator_choice || exit 0
+        case "$operator_choice" in
+            y|Y|yes|YES) SET_TAILSCALE_OPERATOR=yes ;;
+            ''|n|N|no|NO) ;;
+            *) printf '%s\n' 'Answer yes or no.' >&2; exit 1 ;;
+        esac
+    fi
+
+    printf '%s' 'Configure the desktop system tray and login autostart on this user account? [y/N]: '
+    IFS= read -r tray_choice || exit 0
+    case "$tray_choice" in
+        y|Y|yes|YES) CONFIGURE_TRAY=yes ;;
+        ''|n|N|no|NO) ;;
+        *) printf '%s\n' 'Answer yes or no.' >&2; exit 1 ;;
+    esac
+}
+
+confirmPlan() {
+    printf '\n%s\n' 'Planned Tailscale changes:'
+    if [ "$PREVIOUSLY_CONNECTED" = no ]; then
+        printf '  Connect this device as %s; standard OpenSSH will be selected and Tailscale SSH will be off.\n' "$TAILSCALE_HOSTNAME"
+        if [ -n "$AUTH_TOKEN" ]; then
+            printf '%s\n' '  Authenticate with the supplied auth key (value remains hidden).'
+        else
+            printf '%s\n' '  Start browser-based Tailscale authentication.'
+        fi
+        if [ ! -x "$(command -v tailscale 2>/dev/null || true)" ] || [ "$FORCE_UPDATE" -eq 1 ]; then
+            printf '%s\n' '  Install or update Tailscale using the official installer, with a distro package-manager fallback.'
+        fi
+    else
+        printf '%s\n' '  Keep the existing tailnet enrollment and device hostname.'
+        [ "$DISABLE_TAILSCALE_SSH" = yes ] && printf '%s\n' '  Disable the Tailscale SSH feature on this device.'
+        [ "$DISABLE_TAILSCALE_SSH" = no ] && printf '%s\n' '  Leave the current Tailscale SSH setting unchanged.'
+    fi
+    printf '%s\n' '  Ensure the tailscaled system service is enabled and running.'
+    [ "$SET_TAILSCALE_OPERATOR" = yes ] && printf '  Set %s as the Tailscale operator.\n' "$DESKTOP_USER"
+    [ "$CONFIGURE_TRAY" = yes ] && printf '%s\n' '  Write desktop tray and login-autostart files for the current user.'
+
+    if [ "$PREVIOUSLY_CONNECTED" = no ]; then
+        printf '%s' 'Type CONNECT to continue: '
+        expected=CONNECT
+    else
+        printf '%s' 'Type APPLY to continue: '
+        expected=APPLY
+    fi
+    IFS= read -r answer || exit 0
+    [ "$answer" = "$expected" ] || {
+        printf '%s\n' 'No changes applied.'
+        exit 0
+    }
 }
 
 # ── Status ───────────────────────────────────────────────────────────────────
@@ -383,17 +444,23 @@ printStatus() {
         printf "%b\n" "${CYAN}  Tailscale IP   : $TS_IP${RC}"
     fi
 
-    DESKTOP_USER="${SUDO_USER:-$USER}"
-    printf "%b\n" "${CYAN}  Operator       : $DESKTOP_USER (no sudo required)${RC}"
-    printf "%b\n" "${CYAN}  XDG Autostart  : ~/.config/autostart/tailscale-systray.desktop${RC}"
-    printf "%b\n" "${CYAN}  ~/.xprofile    : enabled (~/.xprofile)${RC}"
-
-    if pgrep -u "$(id -u)" -f "tailscale" >/dev/null 2>&1; then
-        printf "%b\n" "${CYAN}  System Tray    : active (running in Quickshell top bar)${RC}"
+    if [ "$SET_TAILSCALE_OPERATOR" = yes ]; then
+        printf "%b\n" "${CYAN}  Operator       : $DESKTOP_USER (selected this run)${RC}"
     else
-        printf "%b\n" "${CYAN}  System Tray    : configured (starts on login or run 'tailscale-tray')${RC}"
+        printf "%b\n" "${CYAN}  Operator       : unchanged by this run${RC}"
     fi
-    printf "%b\n" "${CYAN}  Tray Icon      : minimal Nord SVG (tailscale-connected.svg)${RC}"
+    if [ "$CONFIGURE_TRAY" = yes ]; then
+        printf "%b\n" "${CYAN}  XDG Autostart  : ~/.config/autostart/tailscale-systray.desktop${RC}"
+        printf "%b\n" "${CYAN}  ~/.xprofile    : configured for Tailscale tray autostart${RC}"
+        if pgrep -u "$(id -u)" -f "tailscale" >/dev/null 2>&1; then
+            printf "%b\n" "${CYAN}  System Tray    : active (running in Quickshell top bar)${RC}"
+        else
+            printf "%b\n" "${CYAN}  System Tray    : configured (starts on login or run 'tailscale-tray')${RC}"
+        fi
+        printf "%b\n" "${CYAN}  Tray Icon      : minimal Nord SVG (tailscale-connected.svg)${RC}"
+    else
+        printf "%b\n" "${CYAN}  Desktop tray   : unchanged by this run${RC}"
+    fi
 
     printf "%b\n" "${GREEN}========================================${RC}"
     printf "%b\n" "${CYAN}Useful commands:${RC}"
@@ -409,8 +476,45 @@ printStatus() {
 
 checkEnv
 checkEscalationTool
+[ -t 0 ] || { printf '%s\n' 'Run Tailscale setup in a terminal so you can choose the connection, SSH mode, operator, and desktop changes.' >&2; exit 1; }
+
+if [ "$TRAY_ONLY" -eq 1 ]; then
+    printf '%s' 'Configure desktop tray and login autostart for this user? [y/N]: '
+    IFS= read -r tray_choice || exit 0
+    case "$tray_choice" in
+        y|Y|yes|YES) CONFIGURE_TRAY=yes ;;
+        ''|n|N|no|NO) exit 0 ;;
+        *) printf '%s\n' 'Answer yes or no.' >&2; exit 1 ;;
+    esac
+    printf '%s' 'Type APPLY to write the tray and autostart files: '
+    IFS= read -r answer || exit 0
+    [ "$answer" = APPLY ] || exit 0
+    setupTailscaleSystray
+    exit 0
+fi
+
+if tailscaleIsRunning; then
+    PREVIOUSLY_CONNECTED=yes
+    CURRENT_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
+    CURRENT_HOST=$(tailscale status --self --json 2>/dev/null |
+        sed -n 's/.*"HostName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+    CURRENT_HOST="${CURRENT_HOST:-$(hostname)}"
+    printf '%s\n' "Existing tailnet connection: $CURRENT_HOST ($CURRENT_IP)"
+    offerOpenSSHTransport
+else
+    promptConfiguration
+fi
+
+askOptionalChanges
+confirmPlan
 installTailscale
 enableTailscale
-setupTailscaleSystray
+if [ "$DISABLE_TAILSCALE_SSH" = yes ]; then
+    "$ESCALATION_TOOL" tailscale set --ssh=false
+    printf '%b\n' "${GREEN}Tailscale SSH disabled. Test standard OpenSSH from outside the LAN.${RC}"
+fi
 configureTailscale
+if [ "$CONFIGURE_TRAY" = yes ]; then
+    setupTailscaleSystray
+fi
 printStatus

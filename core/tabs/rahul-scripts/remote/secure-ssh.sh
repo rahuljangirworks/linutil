@@ -1,481 +1,397 @@
 #!/bin/sh -e
 
-# Description: Server SSH - install and harden SSH server with strong crypto, Rahul login key, and container compatibility.
-# Rerunnable: Yes - backs up config, validates before applying, auto-rollback on error
-# Author: Rahul Jangir
-# Based on: https://github.com/rahuljangirworks/secure-SSH
+# Audit OpenSSH, with optional authentication hardening for ordinary Linux hosts.
 
-. ../../common-script.sh
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+. "$SCRIPT_DIR/../../common-script.sh"
 
-# ─── Constants ──────────────────────────────────────────────────────────────
-SSHD_CONFIG="/etc/ssh/sshd_config"
-SSHD_HARDENING_CONF="/etc/ssh/sshd_config.d/00-hardening.conf"
-BACKUP_DIR="/etc/ssh/backups"
-SSH_PORT="22"
-USER_SSH_DIR="$HOME/.ssh"
-AUTHORIZED_KEYS_FILE="$USER_SSH_DIR/authorized_keys"
-RAHUL_LOGIN_KEY="$USER_SSH_DIR/rahul_authorized_keys"
-RAHUL_LOGIN_KEY_PUB="$RAHUL_LOGIN_KEY.pub"
-
-# ─── Recommended Crypto Settings ───────────────────────────────────────────
-# Post-quantum ready (OpenSSH 10+)
-PQ_KEX="mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512"
-# Classical with sntrup761 (OpenSSH 9.x)
-CLASSIC_KEX="sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512"
-# Fallback for older versions
-LEGACY_KEX="curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group14-sha256"
-
-RECOMMENDED_CIPHERS="chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
-RECOMMENDED_MACS="hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com"
-RECOMMENDED_HOST_KEY_ALGOS="ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256-cert-v01@openssh.com,rsa-sha2-256"
-
-# ─── Prompt for SSH port ───────────────────────────────────────────────────
-askSSHPort() {
-    CURRENT_PORT=$("$ESCALATION_TOOL" sshd -T 2>/dev/null | awk '$1 == "port" { print $2; exit }' || true)
-    if [ -z "$CURRENT_PORT" ]; then
-        CURRENT_PORT=$(grep -E "^#?Port " "$SSHD_HARDENING_CONF" "$SSHD_CONFIG" 2>/dev/null | head -1 | awk '{print $2}' || echo "22")
-    fi
-    CURRENT_PORT="${CURRENT_PORT:-22}"
-
-    printf "%b\n" "${CYAN}========================================${RC}"
-    printf "%b\n" "${CYAN}SSH Port Configuration${RC}"
-    printf "%b\n" "${CYAN}========================================${RC}"
-    printf "%b" "${CYAN}Enter SSH port [${CURRENT_PORT}]: ${RC}"
-    read -r INPUT_PORT
-    SSH_PORT="${INPUT_PORT:-$CURRENT_PORT}"
-
-    if [ "$SSH_PORT" != "$CURRENT_PORT" ]; then
-        printf "%b\n" "${YELLOW}⚠ SSH port will change from ${CURRENT_PORT} to ${SSH_PORT}${RC}"
-        printf "%b\n" "${YELLOW}  Make sure to update your firewall and connection settings!${RC}"
-    else
-        printf "%b\n" "${GREEN}✓ Using SSH port: ${SSH_PORT}${RC}"
-    fi
-}
-
-# ─── Detect OpenSSH Version ────────────────────────────────────────────────
-detectOpenSSHVersion() {
-    OPENSSH_MAJOR=0
-    OPENSSH_MINOR=0
-
-    if command -v sshd > /dev/null 2>&1; then
-        OPENSSH_VERSION=$(sshd -V 2>&1 | sed -n 's/.*OpenSSH_\([0-9]*\.[0-9]*\).*/\1/p' | head -1)
-        OPENSSH_VERSION="${OPENSSH_VERSION:-unknown}"
-        if [ "$OPENSSH_VERSION" != "unknown" ]; then
-            OPENSSH_MAJOR=$(echo "$OPENSSH_VERSION" | cut -d. -f1)
-            OPENSSH_MINOR=$(echo "$OPENSSH_VERSION" | cut -d. -f2)
-            printf "%b\n" "${GREEN}✓ OpenSSH version: ${OPENSSH_VERSION}${RC}"
-        else
-            printf "%b\n" "${YELLOW}⚠ Could not detect OpenSSH version, using safe defaults${RC}"
-        fi
-    fi
-}
-
-# ─── Select KEX algorithms based on OpenSSH version ────────────────────────
-selectKEX() {
-    if [ "$OPENSSH_MAJOR" -ge 10 ] 2>/dev/null; then
-        KEX_ALGORITHMS="$PQ_KEX"
-        printf "%b\n" "${GREEN}✓ Post-quantum KEX: enabled (OpenSSH 10+)${RC}"
-    elif [ "$OPENSSH_MAJOR" -ge 9 ] 2>/dev/null; then
-        KEX_ALGORITHMS="$CLASSIC_KEX"
-        printf "%b\n" "${CYAN}→ Post-quantum KEX: partial (sntrup761, OpenSSH 9.x)${RC}"
-    else
-        KEX_ALGORITHMS="$LEGACY_KEX"
-        printf "%b\n" "${CYAN}→ Post-quantum KEX: not available, using classical${RC}"
-    fi
-}
-
-# ─── Install OpenSSH server if missing ─────────────────────────────────────
-installSSH() {
-    if command -v sshd > /dev/null 2>&1; then
-        printf "%b\n" "${GREEN}✓ OpenSSH server already installed${RC}"
-        return 0
-    fi
-
-    printf "%b\n" "${YELLOW}Installing OpenSSH server...${RC}"
-    case "$PACKAGER" in
-        pacman)
-            "$ESCALATION_TOOL" "$PACKAGER" -S --needed --noconfirm openssh
-            ;;
-        apt-get|nala)
-            "$ESCALATION_TOOL" "$PACKAGER" update
-            "$ESCALATION_TOOL" "$PACKAGER" install -y openssh-server
-            ;;
-        dnf|yum)
-            "$ESCALATION_TOOL" "$PACKAGER" install -y openssh-server
-            ;;
-        zypper)
-            "$ESCALATION_TOOL" "$PACKAGER" install -y openssh
-            ;;
-        *)
-            printf "%b\n" "${RED}✗ Unsupported package manager: $PACKAGER${RC}"
-            exit 1
-            ;;
-    esac
-
-    printf "%b\n" "${GREEN}✓ OpenSSH server installed${RC}"
-}
-
-# ─── Create backup ─────────────────────────────────────────────────────────
-createBackup() {
-    printf "%b\n" "${CYAN}========================================${RC}"
-    printf "%b\n" "${CYAN}Creating SSH Config Backup${RC}"
-    printf "%b\n" "${CYAN}========================================${RC}"
-
-    TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
-    "$ESCALATION_TOOL" mkdir -p "$BACKUP_DIR"
-
-    if [ -f "$SSHD_CONFIG" ]; then
-        "$ESCALATION_TOOL" cp "$SSHD_CONFIG" "${BACKUP_DIR}/sshd_config.${TIMESTAMP}"
-        printf "%b\n" "${GREEN}✓ Backed up: ${SSHD_CONFIG}${RC}"
-    fi
-
-    if [ -f "$SSHD_HARDENING_CONF" ]; then
-        "$ESCALATION_TOOL" cp "$SSHD_HARDENING_CONF" "${BACKUP_DIR}/00-hardening.conf.${TIMESTAMP}"
-        printf "%b\n" "${GREEN}✓ Backed up existing hardening config${RC}"
-    fi
-
-    echo "$TIMESTAMP" | "$ESCALATION_TOOL" tee "${BACKUP_DIR}/.latest" > /dev/null
-}
-
-# ─── Ensure drop-in config directory ───────────────────────────────────────
-ensureDropInDir() {
-    if [ ! -d "/etc/ssh/sshd_config.d" ]; then
-        "$ESCALATION_TOOL" mkdir -p /etc/ssh/sshd_config.d
-        printf "%b\n" "${CYAN}→ Created /etc/ssh/sshd_config.d/${RC}"
-    fi
-
-    # Ensure Include directive exists in main config
-    if ! grep -q "^Include /etc/ssh/sshd_config.d/" "$SSHD_CONFIG" 2>/dev/null; then
-        # Avoid eval word-splitting by checking if root
-        if [ "$(id -u)" = "0" ]; then
-            sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' "$SSHD_CONFIG"
-        else
-            "$ESCALATION_TOOL" sed -i '1s|^|Include /etc/ssh/sshd_config.d/*.conf\n|' "$SSHD_CONFIG"
-        fi
-        printf "%b\n" "${CYAN}→ Added Include directive to sshd_config${RC}"
-    else
-        printf "%b\n" "${GREEN}✓ Include directive already present${RC}"
-    fi
-}
-
-# ─── Generate Ed25519 host key if missing ──────────────────────────────────
-ensureHostKeys() {
-    if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
-        printf "%b\n" "${YELLOW}→ Generating Ed25519 host key...${RC}"
-        "$ESCALATION_TOOL" ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N "" -q
-        printf "%b\n" "${GREEN}✓ Ed25519 host key generated${RC}"
-    else
-        printf "%b\n" "${GREEN}✓ Ed25519 host key exists${RC}"
-    fi
-
-    # Remove weak DSA key if present
-    if [ -f /etc/ssh/ssh_host_dsa_key ]; then
-        "$ESCALATION_TOOL" mv /etc/ssh/ssh_host_dsa_key /etc/ssh/ssh_host_dsa_key.disabled
-        "$ESCALATION_TOOL" mv /etc/ssh/ssh_host_dsa_key.pub /etc/ssh/ssh_host_dsa_key.pub.disabled 2>/dev/null || true
-        printf "%b\n" "${YELLOW}→ Disabled insecure DSA host key${RC}"
-    fi
-}
-
-# ─── Create reusable Rahul login key ───────────────────────────────────────
-ensureRahulLoginKey() {
-    printf "%b\n" "${CYAN}========================================${RC}"
-    printf "%b\n" "${CYAN}Rahul SSH Login Key${RC}"
-    printf "%b\n" "${CYAN}========================================${RC}"
-
-    mkdir -p "$USER_SSH_DIR"
-    chmod 700 "$USER_SSH_DIR"
-
-    if [ -f "$RAHUL_LOGIN_KEY" ]; then
-        if ssh-keygen -y -f "$RAHUL_LOGIN_KEY" > "$RAHUL_LOGIN_KEY_PUB.tmp" 2>/dev/null; then
-            mv "$RAHUL_LOGIN_KEY_PUB.tmp" "$RAHUL_LOGIN_KEY_PUB"
-            printf "%b\n" "${GREEN}✓ Keeping existing login key: $RAHUL_LOGIN_KEY${RC}"
-            printf "%b\n" "${CYAN}→ Existing private key was not replaced${RC}"
-        else
-            rm -f "$RAHUL_LOGIN_KEY_PUB.tmp"
-            printf "%b\n" "${RED}✗ Existing login key is invalid: $RAHUL_LOGIN_KEY${RC}"
-            printf "%b\n" "${YELLOW}  Move it manually if you want the script to generate a new one.${RC}"
-            exit 1
-        fi
-    else
-        ssh-keygen -t ed25519 -f "$RAHUL_LOGIN_KEY" -N "" -C "rahul_authorized_keys@$(hostname)"
-        printf "%b\n" "${GREEN}✓ Created login key: $RAHUL_LOGIN_KEY${RC}"
-    fi
-
-    chmod 600 "$RAHUL_LOGIN_KEY"
-    chmod 644 "$RAHUL_LOGIN_KEY_PUB"
-
-    touch "$AUTHORIZED_KEYS_FILE"
-    chmod 600 "$AUTHORIZED_KEYS_FILE"
-
-    RAHUL_LOGIN_PUBLIC_KEY=$(cat "$RAHUL_LOGIN_KEY_PUB")
-    if grep -qxF "$RAHUL_LOGIN_PUBLIC_KEY" "$AUTHORIZED_KEYS_FILE" 2>/dev/null; then
-        printf "%b\n" "${GREEN}✓ Public key already allowed in authorized_keys${RC}"
-    else
-        if [ -s "$AUTHORIZED_KEYS_FILE" ]; then
-            printf "\n" >> "$AUTHORIZED_KEYS_FILE"
-        fi
-        printf "%s\n" "$RAHUL_LOGIN_PUBLIC_KEY" >> "$AUTHORIZED_KEYS_FILE"
-        printf "%b\n" "${GREEN}✓ Added Rahul login public key to authorized_keys${RC}"
-    fi
-
-    printf "%b\n" "${YELLOW}⚠ Keep this private key secret. Anyone with it can SSH into this user.${RC}"
-}
-
-# ─── Create SSH warning banner ─────────────────────────────────────────────
-createBanner() {
-    if [ -f /etc/ssh/banner ]; then
-        printf "%b\n" "${GREEN}✓ SSH banner already exists${RC}"
-        return 0
-    fi
-
-    "$ESCALATION_TOOL" tee /etc/ssh/banner > /dev/null << 'BANNEREOF'
-╔══════════════════════════════════════════════════════════════════╗
-║                    AUTHORIZED ACCESS ONLY                       ║
-║                                                                  ║
-║  This system is for authorized users only. All activity is       ║
-║  monitored and logged. Unauthorized access will be prosecuted    ║
-║  to the fullest extent of the law.                               ║
-║                                                                  ║
-║  By proceeding, you agree to the terms of use.                   ║
-╚══════════════════════════════════════════════════════════════════╝
-BANNEREOF
-
-    "$ESCALATION_TOOL" chmod 644 /etc/ssh/banner
-    printf "%b\n" "${GREEN}✓ SSH banner created${RC}"
-}
-
-# ─── Write hardening drop-in config ────────────────────────────────────────
-writeHardeningConfig() {
-    printf "%b\n" "${CYAN}========================================${RC}"
-    printf "%b\n" "${CYAN}Writing SSH Hardening Configuration${RC}"
-    printf "%b\n" "${CYAN}========================================${RC}"
-
-    "$ESCALATION_TOOL" tee "$SSHD_HARDENING_CONF" > /dev/null << SSHEOF
-# ============================================================================
-#  SSH Hardening Configuration
-#  Generated by Linutil SSH Hardening on $(date '+%Y-%m-%d %H:%M:%S')
-#  DO NOT EDIT — managed by linutil rahul-ssh-hardening.sh
-# ============================================================================
-
-# ─── Port & Protocol ───────────────────────────────────────────────────────
-Port ${SSH_PORT}
-AddressFamily inet
-
-# ─── Authentication ────────────────────────────────────────────────────────
-PubkeyAuthentication yes
-AuthorizedKeysFile .ssh/authorized_keys
+SSHD_CONFIG=/etc/ssh/sshd_config
+DROP_IN_DIR=/etc/ssh/sshd_config.d
+HARDENING_CONFIG="$DROP_IN_DIR/00-linutil-homelab.conf"
+LEGACY_CONFIG="$DROP_IN_DIR/00-hardening.conf"
+MANAGED_HEADER='# Managed by Linutil home lab SSH'
+BASELINE='PubkeyAuthentication yes
 PasswordAuthentication no
+KbdInteractiveAuthentication no
 PermitRootLogin no
-PermitEmptyPasswords no
 MaxAuthTries 3
 LoginGraceTime 30
-AuthenticationMethods publickey
-StrictModes yes
-
-# ─── Cryptography ──────────────────────────────────────────────────────────
-HostKey /etc/ssh/ssh_host_ed25519_key
-HostKey /etc/ssh/ssh_host_rsa_key
-HostKeyAlgorithms ${RECOMMENDED_HOST_KEY_ALGOS}
-KexAlgorithms ${KEX_ALGORITHMS}
-Ciphers ${RECOMMENDED_CIPHERS}
-MACs ${RECOMMENDED_MACS}
-
-# ─── Session Security ──────────────────────────────────────────────────────
-ClientAliveInterval 300
-ClientAliveCountMax 2
-MaxSessions 3
 X11Forwarding no
-AllowAgentForwarding no
-AllowTcpForwarding no
-PermitTunnel no
-GatewayPorts no
-PermitUserEnvironment no
+AllowAgentForwarding no'
 
-# ─── Logging ───────────────────────────────────────────────────────────────
-LogLevel VERBOSE
-SyslogFacility AUTH
-
-# ─── Legacy & Compatibility ────────────────────────────────────────────────
-HostbasedAuthentication no
-IgnoreRhosts yes
-UsePAM yes
-
-# ─── Banner ────────────────────────────────────────────────────────────────
-Banner /etc/ssh/banner
-PrintMotd no
-PrintLastLog yes
-
-# ─── Challenge-Response ────────────────────────────────────────────────────
-KbdInteractiveAuthentication no
-SSHEOF
-
-    "$ESCALATION_TOOL" chmod 600 "$SSHD_HARDENING_CONF"
-    printf "%b\n" "${GREEN}✓ Hardening config written: ${SSHD_HARDENING_CONF}${RC}"
+fail() {
+    printf '%s\n' "$*" >&2
+    exit 1
 }
 
-# ─── Set file permissions ──────────────────────────────────────────────────
-securePermissions() {
-    "$ESCALATION_TOOL" chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
-    "$ESCALATION_TOOL" chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
-    printf "%b\n" "${GREEN}✓ SSH file permissions secured${RC}"
-}
-
-# ─── Validate config ──────────────────────────────────────────────────────
-validateConfig() {
-    printf "%b\n" "${YELLOW}Validating SSH configuration...${RC}"
-
-    # Ensure privilege separation directory exists (required in containers)
-    if [ "$(id -u)" = "0" ]; then
-        mkdir -p /run/sshd
+findDaemon() {
+    if [ -x /usr/sbin/sshd ]; then
+        printf '%s\n' /usr/sbin/sshd
     else
-        "$ESCALATION_TOOL" mkdir -p /run/sshd
-    fi
-
-    # Run sshd -t and capture errors for debugging
-    if [ "$(id -u)" = "0" ]; then
-        SSHD_ERRORS=$(sshd -t 2>&1) && SSHD_VALID=0 || SSHD_VALID=1
-    else
-        SSHD_ERRORS=$("$ESCALATION_TOOL" sshd -t 2>&1) && SSHD_VALID=0 || SSHD_VALID=1
-    fi
-
-    if [ "$SSHD_VALID" = "0" ]; then
-        printf "%b\n" "${GREEN}✓ Configuration is valid${RC}"
-        return 0
-    else
-        printf "%b\n" "${RED}✗ Configuration has syntax errors!${RC}"
-        printf "%b\n" "${RED}  Error: ${SSHD_ERRORS}${RC}"
-        printf "%b\n" "${YELLOW}Reverting hardening config...${RC}"
-        if [ "$(id -u)" = "0" ]; then
-            rm -f "$SSHD_HARDENING_CONF"
-        else
-            "$ESCALATION_TOOL" rm -f "$SSHD_HARDENING_CONF"
-        fi
-        # Restore from latest backup if available
-        if [ -f "${BACKUP_DIR}/.latest" ]; then
-            LATEST_TS=$(cat "${BACKUP_DIR}/.latest")
-            if [ -f "${BACKUP_DIR}/sshd_config.${LATEST_TS}" ]; then
-                "$ESCALATION_TOOL" cp "${BACKUP_DIR}/sshd_config.${LATEST_TS}" "$SSHD_CONFIG"
-                printf "%b\n" "${YELLOW}→ Restored backup from ${LATEST_TS}${RC}"
-            fi
-        fi
-        printf "%b\n" "${RED}Please check SSH configuration and try again${RC}"
-        exit 1
+        command -v sshd
     fi
 }
 
-# ─── Enable and Restart SSH service ───────────────────────────────────────
-enableAndRestartSSH() {
-    printf "%b\n" "${YELLOW}Enabling and starting SSH daemon...${RC}"
+runAsAdmin() {
+    "$ESCALATION_TOOL" "$@"
+}
 
-    # Disable systemd socket activation if present (Debian 12+)
-    # ssh.socket overrides the Port directive from sshd_config
-    if systemctl is-active --quiet ssh.socket 2>/dev/null; then
-        printf "%b\n" "${YELLOW}→ Disabling ssh.socket (overrides port config)${RC}"
-        if [ "$(id -u)" = "0" ]; then
-            systemctl disable --now ssh.socket 2>/dev/null || true
-        else
-            "$ESCALATION_TOOL" systemctl disable --now ssh.socket 2>/dev/null || true
-        fi
+effectiveConfig() {
+    runAsAdmin "$SSHD" -T -f "$SSHD_CONFIG" "$@"
+}
+
+printAudit() {
+    printf 'Host: %s\n' "$(hostname)"
+    if [ -r /etc/os-release ]; then
+        awk -F= '$1 == "PRETTY_NAME" {print "OS: " $2}' /etc/os-release
     fi
+    if command -v ip >/dev/null 2>&1; then
+        ip -br address || :
+    fi
+    if command -v ss >/dev/null 2>&1; then
+        printf '\nActive TCP listeners:\n'
+        ss -lnt || :
+    fi
+    if command -v tailscale >/dev/null 2>&1; then
+        printf '\nTailscale addresses:\n'
+        tailscale ip || :
+    fi
+    if [ -n "$SSHD" ]; then
+        "$SSHD" -V 2>&1 || :
+    fi
+    if command -v ssh-keygen >/dev/null 2>&1; then
+        printf '\nHost public-key fingerprints:\n'
+        for key in /etc/ssh/ssh_host_*.pub; do
+            [ -f "$key" ] || continue
+            ssh-keygen -lf "$key" || :
+        done
+    fi
+}
 
-    # Try sshd first (Arch, Fedora, RHEL), then ssh (Debian/Ubuntu)
-    if "$ESCALATION_TOOL" systemctl enable --now sshd 2>/dev/null; then
-        "$ESCALATION_TOOL" systemctl restart sshd 2>/dev/null
-        printf "%b\n" "${GREEN}✓ sshd enabled and restarted${RC}"
-    elif "$ESCALATION_TOOL" systemctl enable --now ssh 2>/dev/null; then
-        "$ESCALATION_TOOL" systemctl restart ssh 2>/dev/null
-        printf "%b\n" "${GREEN}✓ ssh enabled and restarted${RC}"
-    else
-        printf "%b\n" "${RED}✗ Failed to enable/restart SSH daemon${RC}"
-        printf "%b\n" "${YELLOW}Try manually: systemctl restart sshd${RC}"
+printLoginInstructions() {
+    cat <<'INSTRUCTIONS'
+
+Verify the host-key fingerprint through the console or a known trusted path.
+On the admin client, use a passphrase-protected Ed25519 key. Install only the
+client's public key on the named server account. Use the account's effective
+AuthorizedKeysFile location and ownership. For ~/.ssh/authorized_keys use
+mode 0700 for ~/.ssh and 0600 for authorized_keys.
+
+From each approved LAN or Tailscale path, use a fresh SSH session with
+ssh -S none -o PreferredAuthentications=publickey <your-alias>
+and verify the account and required sudo access. Keep your existing session
+and recovery console open.
+INSTRUCTIONS
+}
+
+readSessionContext() {
+    printf 'Paste SSH_CONNECTION from the verified %s session: ' "$1" >&2
+    IFS=' ' read -r client_addr client_port server_addr server_port extra || return 1
+    case "$client_addr" in ''|*[!0-9a-fA-F:.]*) return 1 ;; esac
+    case "$server_addr" in ''|*[!0-9a-fA-F:.]*) return 1 ;; esac
+    for port in "$client_port" "$server_port"; do
+        case "$port" in ''|*[!0-9]*) return 1 ;; esac
+        [ "$port" -gt 0 ] && [ "$port" -le 65535 ] || return 1
+    done
+    [ -z "$extra" ] || return 1
+    printf 'user=%s,host=%s,addr=%s,laddr=%s,lport=%s\n' \
+        "$ADMIN_USER" "$client_addr" "$client_addr" "$server_addr" "$server_port"
+}
+
+confirmSessionPort() {
+    path_name=$1
+    session_context=$2
+    session_port=$(printf '%s\n' "$session_context" |
+        sed -n 's/.*lport=\([0-9][0-9]*\).*/\1/p')
+    [ -n "$session_port" ] || fail "Could not read the verified $path_name SSH port."
+
+    session_config=$(effectiveConfig -C "$session_context") ||
+        fail "Could not read effective OpenSSH settings for the verified $path_name session."
+    current_ports=$(printf '%s\n' "$session_config" |
+        awk '$1 == "port" {print $2}' | sort -nu | tr '\n' ' ')
+    case " $current_ports " in
+        *" $session_port "*) ;;
+        *) fail "The verified $path_name port $session_port is not an effective OpenSSH listener. Review socket activation or port forwarding manually." ;;
+    esac
+
+    printf 'Verified %s SSH session uses TCP port %s. Current effective listener ports are %s.\n' \
+        "$path_name" "$session_port" "$current_ports"
+    printf 'Enter %s to confirm this port while hardening authentication: ' "$session_port"
+    IFS=' ' read -r confirmed_port || exit 0
+    [ "$confirmed_port" = "$session_port" ] || {
+        printf 'No changes applied. Connect through the port you want to use, then rerun the audit.\n'
+        exit 0
+    }
+}
+
+verifyEffective() {
+    required=$(printf '%s\n' "$BASELINE" | tr '[:upper:]' '[:lower:]')
+    while IFS= read -r setting; do
+        if ! printf '%s\n' "$2" | grep -Fxq -- "$setting"; then
+            printf 'Required setting is ineffective (%s): %s\n' "$3" "$setting" >&2
+            return 1
+        fi
+    done <<EOF
+$required
+EOF
+
+    # All other settings, including listeners and host keys, must stay effective.
+    baseline_pattern='^(pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|permitrootlogin|maxauthtries|logingracetime|x11forwarding|allowagentforwarding) '
+    old_settings=$(printf '%s\n' "$1" | sed -E "/$baseline_pattern/d")
+    new_settings=$(printf '%s\n' "$2" | sed -E "/$baseline_pattern/d")
+    if [ "$old_settings" != "$new_settings" ]; then
+        printf 'The proposed configuration changes unrelated settings (%s).\n' "$3" >&2
         return 1
     fi
 }
 
-# ─── Open SSH port in active firewall ──────────────────────────────────────
-configureFirewallForSSH() {
-    printf "%b\n" "${YELLOW}Configuring firewall for SSH port ${SSH_PORT}/tcp...${RC}"
+verifyRootPolicy() {
+    root_config=$(effectiveConfig -C "user=root,${1#*,}") ||
+        fail "Cannot validate the root policy for the $2 path."
+    printf '%s\n' "$root_config" | grep -Fxq 'permitrootlogin no' ||
+        fail "An SSH Match rule still permits root login on the $2 path."
+}
 
-    if command -v firewall-cmd > /dev/null 2>&1 && firewall-cmd --state > /dev/null 2>&1; then
-        FIREWALL_ZONE=$(firewall-cmd --get-default-zone 2>/dev/null || printf "public")
-        FIREWALL_ZONE="${FIREWALL_ZONE:-public}"
-
-        if [ "$SSH_PORT" = "22" ]; then
-            "$ESCALATION_TOOL" firewall-cmd --permanent --zone="$FIREWALL_ZONE" --add-service=ssh
-            printf "%b\n" "${GREEN}✓ firewalld allows SSH service in zone $FIREWALL_ZONE${RC}"
-        else
-            "$ESCALATION_TOOL" firewall-cmd --permanent --zone="$FIREWALL_ZONE" --add-port="${SSH_PORT}/tcp"
-            printf "%b\n" "${GREEN}✓ firewalld allows custom SSH port ${SSH_PORT}/tcp in zone $FIREWALL_ZONE${RC}"
+selectReloadService() {
+    command -v systemctl >/dev/null 2>&1 ||
+        fail 'Automatic apply requires an active, reloadable systemd OpenSSH service.'
+    SERVICE=
+    for unit in ssh.service sshd.service; do
+        if systemctl is-active --quiet "$unit"; then
+            service_id=$(systemctl show --property=Id --value "$unit")
+            [ -n "$service_id" ] || fail "Cannot identify the active service for $unit."
+            [ -z "$SERVICE" ] || [ "$SERVICE" = "$service_id" ] ||
+                fail 'Multiple OpenSSH services are active. Use the host-specific procedure.'
+            SERVICE=$service_id
         fi
-
-        "$ESCALATION_TOOL" firewall-cmd --reload
-        return 0
+    done
+    [ -n "$SERVICE" ] && [ "$(systemctl show --property=CanReload --value "$SERVICE")" = yes ] ||
+        fail 'No active, reloadable OpenSSH service was found. Review the service or socket manually.'
+    exec_start=$(systemctl show --property=ExecStart --value "$SERVICE")
+    if printf '%s\n' "$exec_start" | grep -Eq '[[:space:]]-[fo46p]'; then
+        fail 'The SSH service has command-line overrides. Validate the running configuration manually.'
     fi
-
-    if command -v ufw > /dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-        "$ESCALATION_TOOL" ufw limit "${SSH_PORT}/tcp"
-        printf "%b\n" "${GREEN}✓ UFW allows and rate-limits SSH port ${SSH_PORT}/tcp${RC}"
-        return 0
-    fi
-
-    printf "%b\n" "${YELLOW}→ No active firewalld/UFW detected. Skipping firewall rule.${RC}"
 }
 
-# ─── Print summary ────────────────────────────────────────────────────────
-printSummary() {
-    IP_ADDR=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "your-ip")
-
-    printf "%b\n" "${GREEN}========================================${RC}"
-    printf "%b\n" "${GREEN}Server SSH Setup Complete! 🔒${RC}"
-    printf "%b\n" "${GREEN}========================================${RC}"
-
-    printf "%b\n" "${CYAN}Settings applied:${RC}"
-    printf "%b\n" "${CYAN}  • Port:                  ${SSH_PORT}${RC}"
-    printf "%b\n" "${CYAN}  • Root login:            disabled${RC}"
-    printf "%b\n" "${CYAN}  • Password auth:         disabled${RC}"
-    printf "%b\n" "${CYAN}  • Pubkey auth:           enabled${RC}"
-    printf "%b\n" "${CYAN}  • Rahul login key:       ${RAHUL_LOGIN_KEY}${RC}"
-    printf "%b\n" "${CYAN}  • Max auth tries:        3${RC}"
-    printf "%b\n" "${CYAN}  • Session timeout:       10 min${RC}"
-    printf "%b\n" "${CYAN}  • X11 forwarding:        disabled${RC}"
-    printf "%b\n" "${CYAN}  • TCP forwarding:        disabled${RC}"
-    printf "%b\n" "${CYAN}  • Agent forwarding:      disabled${RC}"
-    printf "%b\n" "${CYAN}  • Log level:             VERBOSE${RC}"
-
-    if [ "$OPENSSH_MAJOR" -ge 10 ] 2>/dev/null; then
-        printf "%b\n" "${CYAN}  • Post-quantum KEX:      enabled${RC}"
-    elif [ "$OPENSSH_MAJOR" -ge 9 ] 2>/dev/null; then
-        printf "%b\n" "${CYAN}  • Post-quantum KEX:      partial (sntrup761)${RC}"
+priorDropInIntact() {
+    runAsAdmin test ! -L "$HARDENING_CONFIG" || return 1
+    if [ "$HAD_CONFIG" = yes ]; then
+        runAsAdmin cmp -s -- "$HARDENING_CONFIG" "$BACKUP_DIR/previous.conf"
     else
-        printf "%b\n" "${CYAN}  • Post-quantum KEX:      classical only${RC}"
+        runAsAdmin test ! -e "$HARDENING_CONFIG"
     fi
-
-    printf "%b\n" "${CYAN}  • Config:                ${SSHD_HARDENING_CONF}${RC}"
-    printf "%b\n" "${CYAN}  • Backups:               ${BACKUP_DIR}/${RC}"
-    printf "%b\n" "${GREEN}========================================${RC}"
-    printf "\n"
-    printf "%b\n" "${YELLOW}⚠  CRITICAL: Test SSH access in a NEW terminal before${RC}"
-    printf "%b\n" "${YELLOW}   closing this session!${RC}"
-    printf "%b\n" "${YELLOW}   ssh -i ~/.ssh/rahul_authorized_keys -p ${SSH_PORT} $(id -un)@${IP_ADDR}${RC}"
-    printf "%b\n" "${CYAN}   Copy this private key to your client: ${RAHUL_LOGIN_KEY}${RC}"
-    printf "%b\n" "${GREEN}========================================${RC}"
 }
 
-# ─── Main execution ───────────────────────────────────────────────────────
-checkEnv
-checkEscalationTool
-installSSH
-detectOpenSSHVersion
-selectKEX
-askSSHPort
-createBackup
-ensureDropInDir
-ensureHostKeys
-ensureRahulLoginKey
-createBanner
-writeHardeningConfig
-securePermissions
-validateConfig
-configureFirewallForSSH
-enableAndRestartSSH
-printSummary
+restoreConfig() {
+    if runAsAdmin test -L "$HARDENING_CONFIG" ||
+        ! runAsAdmin cmp -s -- "$HARDENING_CONFIG" "$BACKUP_DIR/proposed.conf"; then
+        if [ "$RELOAD_ATTEMPTED" = no ] && priorDropInIntact; then
+            return 0
+        fi
+        printf 'The active drop-in changed during rollout. Recovery files: %s\n' "$BACKUP_DIR" >&2
+        return 1
+    fi
+    if [ "$HAD_CONFIG" = yes ]; then
+        runAsAdmin cp -a -- "$BACKUP_DIR/previous.conf" "$LOCK_DIR/restore" &&
+            runAsAdmin mv -fT -- "$LOCK_DIR/restore" "$HARDENING_CONFIG" || return 1
+    else
+        runAsAdmin rm -- "$HARDENING_CONFIG" || return 1
+    fi
+    if [ "$RELOAD_ATTEMPTED" = yes ]; then
+        runAsAdmin "$SSHD" -t -f "$SSHD_CONFIG" &&
+            runAsAdmin systemctl reload "$SERVICE" || return 1
+    fi
+    printf 'Restored the prior OpenSSH configuration.\n' >&2
+}
+
+finishApply() {
+    result=$1
+    trap - 0 HUP INT TERM
+    if [ "$INSTALLED" = yes ] && ! restoreConfig; then
+        printf 'Automatic recovery did not complete. Use your console and backup at %s.\n' "$BACKUP_DIR" >&2
+        result=1
+    fi
+    runAsAdmin rm -f -- "$LOCK_DIR/candidate" "$LOCK_DIR/restore" || result=1
+    runAsAdmin rmdir -- "$LOCK_DIR" || result=1
+    exit "$result"
+}
+
+applyBaseline() {
+    [ -d "$DROP_IN_DIR" ] || fail 'No OpenSSH drop-in directory. Review Include configuration manually.'
+    selectReloadService
+
+    LOCK_DIR="$DROP_IN_DIR/.linutil-homelab.lock"
+    runAsAdmin mkdir -m 0700 -- "$LOCK_DIR" ||
+        fail "Cannot acquire $LOCK_DIR. Check for another rollout before proceeding."
+    INSTALLED=no
+    RELOAD_ATTEMPTED=no
+    trap 'finishApply "$?"' 0
+    trap 'exit 1' HUP INT TERM
+
+    if runAsAdmin test -L "$LEGACY_CONFIG" || runAsAdmin test -e "$LEGACY_CONFIG"; then
+        fail "Legacy or custom configuration found at $LEGACY_CONFIG. Review its listeners, host keys, and overrides before migrating it manually."
+    fi
+
+    # shellcheck disable=SC2016 # awk uses its own field variables.
+    if ! runAsAdmin awk 'tolower($1) == "match" {exit}
+        tolower($1) == "include" {
+            for (i = 2; i <= NF && $i !~ /^#/; i++)
+                if ($i == "/etc/ssh/sshd_config.d/*.conf" || $i == "sshd_config.d/*.conf")
+                    found = 1
+        }
+        END {exit !found}' "$SSHD_CONFIG"; then
+        fail 'The main sshd_config needs a global Include for the drop-in directory.'
+    fi
+
+    HAD_CONFIG=no
+    if runAsAdmin test -L "$HARDENING_CONFIG"; then
+        fail "Resolve the symlink at $HARDENING_CONFIG manually."
+    fi
+    if runAsAdmin test -e "$HARDENING_CONFIG"; then
+        if ! runAsAdmin test -f "$HARDENING_CONFIG" ||
+            ! runAsAdmin grep -Fxq -- "$MANAGED_HEADER" "$HARDENING_CONFIG"; then
+            fail "An unmanaged configuration already exists at $HARDENING_CONFIG."
+        fi
+        HAD_CONFIG=yes
+    fi
+
+    before_global=$(effectiveConfig) || fail 'Cannot validate the existing global SSH configuration.'
+    before_lan=$(effectiveConfig -C "$LAN_CONTEXT") || fail 'Cannot validate the existing LAN session context.'
+    if [ -n "$TAILNET_CONTEXT" ]; then
+        before_tailnet=$(effectiveConfig -C "$TAILNET_CONTEXT") || fail 'Cannot validate the existing Tailscale session context.'
+    fi
+    if printf '%s\n' "$before_global" | grep -Fxq 'usedns yes'; then
+        fail 'UseDNS is active. Validate hostname-dependent rules manually before applying changes.'
+    fi
+
+    BACKUP_DIR=$(runAsAdmin mktemp -d "$DROP_IN_DIR/.linutil-homelab-backup.XXXXXXXX")
+    if [ "$HAD_CONFIG" = yes ]; then
+        runAsAdmin cp -a -- "$HARDENING_CONFIG" "$BACKUP_DIR/previous.conf"
+    fi
+    printf '%s\n%s\n' "$MANAGED_HEADER" "$BASELINE" |
+        runAsAdmin tee "$BACKUP_DIR/proposed.conf" >/dev/null
+    runAsAdmin install -m 0644 -- "$BACKUP_DIR/proposed.conf" "$LOCK_DIR/candidate"
+
+    priorDropInIntact || fail 'The target drop-in changed during rollout.'
+    # Set the rollback flag before the atomic move so interrupts are covered.
+    INSTALLED=yes
+    if ! runAsAdmin mv -fT -- "$LOCK_DIR/candidate" "$HARDENING_CONFIG"; then
+        INSTALLED=no
+        fail 'Could not install the proposed OpenSSH drop-in.'
+    fi
+
+    runAsAdmin "$SSHD" -t -f "$SSHD_CONFIG" || fail 'The proposed configuration failed syntax validation.'
+    after_global=$(effectiveConfig) || fail 'Cannot read the proposed global configuration.'
+    verifyEffective "$before_global" "$after_global" global ||
+        fail 'Global configuration validation failed.'
+    after_lan=$(effectiveConfig -C "$LAN_CONTEXT") || fail 'Cannot read the proposed LAN configuration.'
+    verifyEffective "$before_lan" "$after_lan" LAN ||
+        fail 'LAN configuration validation failed.'
+    verifyRootPolicy "$LAN_CONTEXT" LAN
+    if [ -n "$TAILNET_CONTEXT" ]; then
+        after_tailnet=$(effectiveConfig -C "$TAILNET_CONTEXT") ||
+            fail 'Cannot read the proposed Tailscale configuration.'
+        verifyEffective "$before_tailnet" "$after_tailnet" Tailscale ||
+            fail 'Tailscale configuration validation failed.'
+        verifyRootPolicy "$TAILNET_CONTEXT" Tailscale
+    fi
+
+    runAsAdmin cmp -s -- "$HARDENING_CONFIG" "$BACKUP_DIR/proposed.conf" ||
+        fail 'The OpenSSH drop-in changed before service reload.'
+    RELOAD_ATTEMPTED=yes
+    if ! runAsAdmin systemctl reload "$SERVICE" || ! systemctl is-active --quiet "$SERVICE"; then
+        fail "Reload failed for $SERVICE."
+    fi
+    INSTALLED=no
+
+    printf '\nOpenSSH authentication policy applied to %s.\n' "$SERVICE"
+    printf 'Retest fresh SSH login and required sudo over each approved path before closing the recovery console.\n'
+    if [ "$HAD_CONFIG" = yes ]; then
+        printf 'Recovery copy: %s/previous.conf\n' "$BACKUP_DIR"
+        printf 'Restore it to %s if needed, then run sshd -t and reload %s.\n' "$HARDENING_CONFIG" "$SERVICE"
+    else
+        printf 'To roll back this first installation, remove %s, run sshd -t and reload %s.\n' "$HARDENING_CONFIG" "$SERVICE"
+    fi
+}
+
+MODE=full
+case "$#:$1" in
+    0:) MODE=full ;;
+    1:--audit) MODE=audit ;;
+    1:--configure) MODE=configure ;;
+    *) fail 'Usage: secure-ssh.sh [--audit|--configure]' ;;
+esac
+
+SSHD=$(findDaemon) || SSHD=
+if [ "$MODE" != configure ]; then
+    printAudit
+fi
+if [ -n "$SSHD" ] && { [ "$(id -u)" -eq 0 ] || command -v sudo >/dev/null 2>&1 || command -v doas >/dev/null 2>&1; }; then
+    checkEscalationTool
+    if audit_config=$(effectiveConfig); then
+        if [ "$MODE" != configure ]; then
+            printf '\nEffective OpenSSH settings:\n'
+            printf '%s\n' "$audit_config" |
+                awk '$1 ~ /^(port|addressfamily|listenaddress|permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication|authorizedkeysfile|maxauthtries|logingracetime|x11forwarding|allowagentforwarding)$/'
+        fi
+    else
+        [ "$MODE" = configure ] && fail 'Could not read the effective OpenSSH server configuration.'
+        printf '\nEffective OpenSSH settings were unavailable.\n'
+    fi
+else
+    [ "$MODE" = configure ] && fail 'OpenSSH server or privilege escalation is unavailable. Install the server and rerun the audit first.'
+    printf '\nOpenSSH server or privilege escalation was unavailable.\n'
+fi
+if [ "$MODE" != configure ]; then
+    printLoginInstructions
+fi
+
+if command -v omv-salt >/dev/null 2>&1 || [ -f /etc/openmediavault/config.xml ]; then
+    printf '\nUse the OpenMediaVault web UI for SSH. Verify the named user, _ssh and sudo groups, and registered public key there.\n'
+    exit 0
+fi
+if command -v pveversion >/dev/null 2>&1 || [ -d /etc/pve ]; then
+    printf '\nUse the Proxmox-specific procedure. Check cluster status and preserve the root key access needed by cluster peers.\n'
+    exit 0
+fi
+if [ -e "$LEGACY_CONFIG" ] || [ -L "$LEGACY_CONFIG" ]; then
+    printf '\nReview %s before applying the new baseline.\n' "$LEGACY_CONFIG"
+    printf 'Back it up and plan the migration from console access. Preserve verified listeners, host keys, and account access while reviewing old crypto and authentication overrides.\n'
+    printf 'Verify the replacement client keys over every approved path before revoking any old shared login key.\n'
+    exit 0
+fi
+if [ "$MODE" = audit ] || [ -z "$SSHD" ] || [ -z "$ESCALATION_TOOL" ]; then
+    exit 0
+fi
+
+[ -t 0 ] || fail "Run SSH hardening in a terminal so you can confirm the login account, verified port, access paths, and apply decision."
+
+printf '\nNamed admin account to verify (Enter to finish audit): '
+IFS= read -r ADMIN_USER || exit 0
+[ -n "$ADMIN_USER" ] || exit 0
+case "$ADMIN_USER" in
+    -*|*[!A-Za-z0-9_.-]*) fail 'Enter an existing, named administrator account.' ;;
+esac
+admin_uid=$(id -u "$ADMIN_USER" 2>/dev/null) ||
+    fail 'The named administrator account could not be found.'
+[ "$admin_uid" -gt 0 ] || fail 'Enter a non-root administrator account.'
+
+printf '%s\n' "In the fresh login, run: printf '%s\\n' \"\$SSH_CONNECTION\""
+LAN_CONTEXT=$(readSessionContext LAN) || fail 'A valid, verified LAN session is required.'
+confirmSessionPort LAN "$LAN_CONTEXT"
+printf 'Is a verified standard OpenSSH connection over the Tailscale interface in use? [y/N]: '
+IFS= read -r has_tailnet || exit 0
+TAILNET_CONTEXT=
+case "$has_tailnet" in
+    y|Y|yes|YES)
+        TAILNET_CONTEXT=$(readSessionContext Tailscale) || fail 'A valid, verified Tailscale session is required.'
+        confirmSessionPort Tailscale "$TAILNET_CONTEXT"
+        ;;
+    ''|n|N|no|NO) ;;
+    *) fail 'Answer yes or no to confirm the required login paths.' ;;
+esac
+
+printf '\nType APPLY after verifying fresh key logins and required sudo, with a recovery console open: '
+IFS= read -r confirmed || exit 0
+[ "$confirmed" = APPLY ] || exit 0
+applyBaseline
